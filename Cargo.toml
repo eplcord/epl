@@ -1,0 +1,18 @@
+[package]
+name = "epl"
+description = "A Litecord compatible/inspired OSS implementation of Discord's backend for fun and profit."
+keywords = ["discord", "litecord"]
+
+homepage = "https://gitlab.com/uwueviee/epl"
+repository = "https://gitlab.com/uwueviee/epl"
+
+authors = ["Evie Viau <evie@eviee.gay>"]
+
+license = "Apache-2.0"
+
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
