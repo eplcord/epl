@@ -42,6 +42,7 @@ Optional:
 Required:
  * Rust (1.56+)
  * [libpq](https://www.postgresql.org/docs/current/libpq.html)
+ * [diesel cli](https://diesel.rs) (`cargo install diesel_cli`)
 
 Optional:
  * [mediaproxy](https://gitlab.com/litecord/mediaproxy)
@@ -58,7 +59,7 @@ Optional:
 |   `MEDIAPROXY_URL`    |                          The URL of the Litecord mediaproxy                          |                  `media.epl.dev`                  |           |           N/A            |
 |  `HTTP_LISTEN_ADDR`   |                            Listen address of the HTTP API                            |                  `0.0.0.0:3926`                   |           |      `0.0.0.0:3926`      |
 | `GATEWAY_LISTEN_ADDR` |                         Listen address of the gateway socket                         |                  `0.0.0.0:5001`                   |           |      `0.0.0.0:5001`      |
-|    `POSTGRES_ADDR`    |                               PostgreSQL database URL                                | `postgres://username:password@localhost/database` |    [x]    |           N/A            |
+|    `DATABASE_URL`     |                               PostgreSQL database URL                                | `postgres://username:password@localhost/database` |    [x]    |           N/A            |
 |     `REDIS_ADDR`      |                                  Redis database URL                                  |             `redis://127.0.0.1:6379`              |           | `redis://127.0.0.1:6379` |
 |     `LVSP_SECRET`     |      LVSP Shared Secret, can be anything (Must be the same on the LVSP server)       |                   `supersecret`                   |    [x]    |           N/A            |
 |     `REQUIRE_SSL`     |             Whether or not SSL protocols will be used (wss:// https://)              |                       true                        |           |          false           |
