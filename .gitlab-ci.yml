@@ -21,13 +21,26 @@ image: "rust:latest"
 #   - apt-get update -yqq
 #   - apt-get install -yqq --no-install-recommends build-essential
 
-build:cargo:
+build:cargo:amd64:
   stage: build
+  tags:
+    - linux
   script:
     - cargo build --release
   artifacts:
     paths:
       - target/release/epl
+
+build:cargo:arm64:
+  stage: build
+  tags:
+    - arm64
+  script:
+    - cargo build --release
+    - mv target/release/epl target/release/epl-arm64
+  artifacts:
+    paths:
+      - target/release/epl-arm64
 
 # Use cargo to test the project
 test:cargo:
