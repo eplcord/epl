@@ -38,7 +38,8 @@ pub async fn entry() {
         // Legacy API v6 routes
         .mount("/api/v6", rocket::routes![
             routes::v6::experiments::experiments,
-            routes::v6::experiments::science
+            routes::v6::experiments::science,
+            routes::v6::experiments::track
         ])
 
         // Fairings

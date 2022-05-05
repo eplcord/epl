@@ -17,3 +17,8 @@ pub async fn experiments() -> Json<Experiments> {
 pub async fn science() -> &'static str {
     ""
 }
+
+#[post("/track")]
+pub async fn track() -> &'static str {
+    ""
+}
