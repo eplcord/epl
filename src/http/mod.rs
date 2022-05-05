@@ -2,7 +2,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use log::info;
 
-use rocket::get;
+use rocket::{get, routes};
 use crate::{EplOptions, Options};
 
 // TODO: Remove test/example code
@@ -30,5 +30,6 @@ pub async fn entry() {
     rocket::custom(&rocket_options)
         .mount("/", routes![index])
         .launch()
-        .await;
+        .await
+        .expect("Failed to start the HTTP API server!");
 }

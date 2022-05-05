@@ -1,5 +1,3 @@
-#[macro_use] extern crate rocket;
-
 use pretty_env_logger;
 use log::info;
 
@@ -41,5 +39,7 @@ async fn main() {
         gateway::entry().await
     });
 
-    join!(http, gateway);
+    let res = join!(http, gateway);
+    res.0.expect("Failed to join the HTTP API server!");
+    res.1.expect("Failed to join the Gateway server!")
 }
