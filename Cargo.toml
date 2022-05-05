@@ -18,7 +18,8 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.18.1", features = ["rt"] } # Async
 warp = "0.3.2" # Gateway
-rocket = { git = "https://github.com/SergioBenitez/Rocket.git" } # HTTP
+rocket = { git = "https://github.com/SergioBenitez/Rocket.git", features = ["json"] } # HTTP
+rocket_dyn_templates = { git = "https://github.com/SergioBenitez/Rocket.git", features = ["handlebars"]}
 diesel = { version = "2.0.0-rc.0", features = ["postgres"] } # Database
 
 chrono = "0.4.19"
