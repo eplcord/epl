@@ -1,11 +1,14 @@
-mod routes;
-
 use std::net::IpAddr;
 use std::str::FromStr;
-use log::info;
-use rocket_dyn_templates::Template;
 
-use crate::{EplOptions, Options};
+use log::info;
+use rocket::config::Ident;
+use rocket_dyn_templates::Template;
+use rocket::figment::{value::{Map, Value}, util::map};
+
+use crate::{EplOptions, Options, VERSION};
+
+mod routes;
 
 pub async fn entry() {
     info!("Hello from the HTTP API!");
@@ -15,15 +18,26 @@ pub async fn entry() {
     let listen_addr = options.http_listen_addr.split_once(":")
         .expect("Issue getting HTTP Listen Address!");
 
-    let rocket_options = rocket::Config {
-        address: IpAddr::from_str(listen_addr.0)
-            .expect("IP has incorrect format!"),
-        port: u16::from_str(listen_addr.1)
-            .expect("Port has incorrect format!"),
-        ..rocket::Config::release_default()
+    let db: Map<_, Value> = map!{
+        "url" => options.database_url.into(),
+        "pool_size" => 12.into()
     };
 
-    rocket::custom(&rocket_options)
+    let rocket_options = rocket::Config::figment()
+        // Database
+        .merge(("databases", map!["epl_db" => db]))
+
+        // Server configuration
+        .merge(("address", IpAddr::from_str(listen_addr.0)
+            .expect("IP has incorrect format!")))
+        .merge(("port", u16::from_str(listen_addr.1)
+            .expect("Port has incorrect format!")))
+
+        // Branding
+        .merge(("ident", Ident::try_new(format!("Epl v{}", VERSION))
+            .expect("Failed to create new Ident")));
+
+    rocket::custom(rocket_options)
         // Index routes
         .mount("/", rocket::routes![
             routes::index::index
@@ -44,6 +58,7 @@ pub async fn entry() {
 
         // Fairings
         .attach(Template::fairing())
+        .attach(crate::database::EplDb::fairing())
 
         .launch()
         .await
