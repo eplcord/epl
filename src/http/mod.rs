@@ -1,5 +1,4 @@
 use std::net::IpAddr;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use log::info;
@@ -8,15 +7,9 @@ use rocket::figment::{util::map, value::{Map, Value}};
 use rocket_dyn_templates::Template;
 
 use crate::{EplOptions, Options, VERSION};
-use rocket::options;
 
 mod routes;
 mod cors;
-
-#[options("/<_path..>")]
-pub async fn cors_options(_path: PathBuf) -> &'static str {
-    ""
-}
 
 pub async fn entry() {
     info!("Hello from the HTTP API!");
@@ -48,7 +41,7 @@ pub async fn entry() {
     rocket::custom(rocket_options)
         // CORS routes
         .mount("/", rocket::routes![
-            cors_options
+            cors::cors_options
         ])
         // Index routes
         .mount("/", rocket::routes![

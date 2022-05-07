@@ -1,8 +1,15 @@
-use rocket::http::Header;
-use rocket::{Request, Response};
+use std::path::PathBuf;
+
+use rocket::{Request, Response, options};
 use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::Header;
 
 pub struct CORS;
+
+#[options("/<_path..>")]
+pub async fn cors_options(_path: PathBuf) -> &'static str {
+    ""
+}
 
 #[rocket::async_trait]
 impl Fairing for CORS {
