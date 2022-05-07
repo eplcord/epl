@@ -2,9 +2,8 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use async_bb8_diesel::ConnectionManager;
-use bb8::Pool;
 use diesel::PgConnection;
+use diesel::r2d2::{ConnectionManager, Pool};
 use log::info;
 use rocket::futures::StreamExt;
 use warp::Filter;
@@ -16,7 +15,7 @@ use crate::gateway::handle_op::handle_op;
 mod schema;
 mod handle_op;
 
-type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
+type ConnectionPool = diesel::r2d2::Pool<ConnectionManager<PgConnection>>;
 
 fn with_pool(
     pool: ConnectionPool,

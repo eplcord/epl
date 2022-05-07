@@ -56,18 +56,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-bb8-diesel"
-version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git#ab1f49e0b3f95557aa96bf593282199fafeef4bd"
-dependencies = [
- "async-trait",
- "bb8",
- "diesel 2.0.0-rc.0",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "async-stream"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -130,19 +118,6 @@ name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
-
-[[package]]
-name = "bb8"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
-dependencies = [
- "async-trait",
- "futures-channel",
- "futures-util",
- "parking_lot 0.12.0",
- "tokio",
-]
 
 [[package]]
 name = "binascii"
@@ -391,21 +366,8 @@ checksum = "b28135ecf6b7d446b43e27e225622a038cc4e2930a1022f51cdb97ada19b8e4d"
 dependencies = [
  "bitflags",
  "byteorder",
- "diesel_derives 1.4.1",
- "pq-sys",
- "r2d2",
-]
-
-[[package]]
-name = "diesel"
-version = "2.0.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e531d0abf8147036383c88ce3785d9cda6fe1b8b1183021ffa01cf49c5819d24"
-dependencies = [
- "bitflags",
- "byteorder",
- "diesel_derives 2.0.0-rc.0",
- "itoa",
+ "chrono",
+ "diesel_derives",
  "pq-sys",
  "r2d2",
  "uuid",
@@ -417,18 +379,6 @@ version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45f5098f628d02a7a0f68ddba586fb61e80edec3bdc1be3b921f4ceec60858d3"
 dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "diesel_derives"
-version = "2.0.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "212ba0cdc611523c37f26c7b3b4aedb4af7cbfe9239c4e7736a8a7c82284d77b"
-dependencies = [
- "proc-macro-error",
  "proc-macro2",
  "quote",
  "syn",
@@ -495,13 +445,12 @@ dependencies = [
 name = "epl"
 version = "0.1.0"
 dependencies = [
- "async-bb8-diesel",
- "bb8",
  "chrono",
- "diesel 2.0.0-rc.0",
+ "diesel",
  "jsonwebtoken",
  "log",
  "pretty_env_logger",
+ "rand",
  "rocket",
  "rocket_dyn_templates",
  "rocket_sync_db_pools",
@@ -1512,30 +1461,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-error"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
-dependencies = [
- "proc-macro-error-attr",
- "proc-macro2",
- "quote",
- "syn",
- "version_check",
-]
-
-[[package]]
-name = "proc-macro-error-attr"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
-dependencies = [
- "proc-macro2",
- "quote",
- "version_check",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1710,7 +1635,7 @@ dependencies = [
 [[package]]
 name = "rocket"
 version = "0.5.0-rc.1"
-source = "git+https://github.com/SergioBenitez/Rocket.git#761ffb009ea9d35c32d3c8eecd948ec4434cd0a3"
+source = "git+https://github.com/SergioBenitez/Rocket.git#7908dc43ca2d68f5b6afc2a2e344faa1f1380c7d"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -1748,7 +1673,7 @@ dependencies = [
 [[package]]
 name = "rocket_codegen"
 version = "0.5.0-rc.1"
-source = "git+https://github.com/SergioBenitez/Rocket.git#761ffb009ea9d35c32d3c8eecd948ec4434cd0a3"
+source = "git+https://github.com/SergioBenitez/Rocket.git#7908dc43ca2d68f5b6afc2a2e344faa1f1380c7d"
 dependencies = [
  "devise",
  "glob",
@@ -1763,7 +1688,7 @@ dependencies = [
 [[package]]
 name = "rocket_dyn_templates"
 version = "0.1.0-rc.1"
-source = "git+https://github.com/SergioBenitez/Rocket.git#761ffb009ea9d35c32d3c8eecd948ec4434cd0a3"
+source = "git+https://github.com/SergioBenitez/Rocket.git#7908dc43ca2d68f5b6afc2a2e344faa1f1380c7d"
 dependencies = [
  "glob",
  "handlebars",
@@ -1775,7 +1700,7 @@ dependencies = [
 [[package]]
 name = "rocket_http"
 version = "0.5.0-rc.1"
-source = "git+https://github.com/SergioBenitez/Rocket.git#761ffb009ea9d35c32d3c8eecd948ec4434cd0a3"
+source = "git+https://github.com/SergioBenitez/Rocket.git#7908dc43ca2d68f5b6afc2a2e344faa1f1380c7d"
 dependencies = [
  "cookie",
  "either",
@@ -1801,9 +1726,9 @@ dependencies = [
 [[package]]
 name = "rocket_sync_db_pools"
 version = "0.1.0-rc.1"
-source = "git+https://github.com/SergioBenitez/Rocket.git#761ffb009ea9d35c32d3c8eecd948ec4434cd0a3"
+source = "git+https://github.com/SergioBenitez/Rocket.git#7908dc43ca2d68f5b6afc2a2e344faa1f1380c7d"
 dependencies = [
- "diesel 1.4.8",
+ "diesel",
  "r2d2",
  "rocket",
  "rocket_sync_db_pools_codegen",
@@ -1814,7 +1739,7 @@ dependencies = [
 [[package]]
 name = "rocket_sync_db_pools_codegen"
 version = "0.1.0-rc.1"
-source = "git+https://github.com/SergioBenitez/Rocket.git#761ffb009ea9d35c32d3c8eecd948ec4434cd0a3"
+source = "git+https://github.com/SergioBenitez/Rocket.git#7908dc43ca2d68f5b6afc2a2e344faa1f1380c7d"
 dependencies = [
  "devise",
  "quote",
@@ -2206,7 +2131,6 @@ dependencies = [
  "mio 0.8.2",
  "num_cpus",
  "once_cell",
- "parking_lot 0.12.0",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
@@ -2486,9 +2410,13 @@ checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
 name = "uuid"
-version = "1.0.0"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom",
+ "serde",
+]
 
 [[package]]
 name = "valuable"

@@ -1,3 +1,5 @@
+#[macro_use] extern crate diesel;
+
 use diesel::pg::PgConnection;
 use log::{debug, info};
 use pretty_env_logger;
@@ -11,6 +13,7 @@ mod gateway;
 mod http;
 mod database;
 mod util;
+mod schema;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -37,11 +40,10 @@ async fn main() {
     // Even though Rocket will handle its own database pool, we will still need one for the Gateway
     // We might consider just using this pool and plugging it into Rocket's state in the future
     info!("Connecting to database");
-    let db_manager = async_bb8_diesel::ConnectionManager::<PgConnection>::new(options.database_url);
-    let db_pool = bb8::Pool::builder()
+    let db_manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(options.database_url);
+    let db_pool = diesel::r2d2::Pool::builder()
         .max_size(12) // Keep this in sync with Rocket (Move it to env?)
         .build(db_manager)
-        .await
         .expect("Failed to connect to the database!");
 
     info!("Spawning HTTP API");

@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use log::info;
 use rocket::config::Ident;
+use rocket::figment::{util::map, value::{Map, Value}};
 use rocket_dyn_templates::Template;
-use rocket::figment::{value::{Map, Value}, util::map};
 
 use crate::{EplOptions, Options, VERSION};
 use rocket::options;
