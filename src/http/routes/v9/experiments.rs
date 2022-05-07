@@ -1,4 +1,4 @@
-use rocket::{options, post};
+use rocket::{get, post};
 use rocket::serde::json::Json;
 use serde::Serialize;
 
@@ -8,7 +8,7 @@ pub struct Experiments {
     pub assignments: Vec<[i32; 5]>
 }
 
-#[options("/experiments")]
+#[get("/experiments")]
 pub async fn experiments() -> Json<Experiments> {
     Json(Experiments{ fingerprint: "".to_string(), assignments: vec![] })
 }

@@ -17,10 +17,13 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.18.1", features = ["rt"] } # Async
+
 warp = "0.3.2" # Gateway
+
 rocket = { git = "https://github.com/SergioBenitez/Rocket.git", features = ["json"] } # HTTP
 rocket_dyn_templates = { git = "https://github.com/SergioBenitez/Rocket.git", features = ["handlebars"]}
 rocket_sync_db_pools = { git = "https://github.com/SergioBenitez/Rocket.git", features = ["diesel_postgres_pool"] }
+
 diesel = { version = "2.0.0-rc.0", features = ["postgres", "r2d2"] } # Database
 bb8 = "0.8.0"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git" }

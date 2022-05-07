@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use log::info;
@@ -7,8 +8,15 @@ use rocket_dyn_templates::Template;
 use rocket::figment::{value::{Map, Value}, util::map};
 
 use crate::{EplOptions, Options, VERSION};
+use rocket::options;
 
 mod routes;
+mod cors;
+
+#[options("/<_path..>")]
+pub async fn cors_options(_path: PathBuf) -> &'static str {
+    ""
+}
 
 pub async fn entry() {
     info!("Hello from the HTTP API!");
@@ -38,6 +46,10 @@ pub async fn entry() {
             .expect("Failed to create new Ident")));
 
     rocket::custom(rocket_options)
+        // CORS routes
+        .mount("/", rocket::routes![
+            cors_options
+        ])
         // Index routes
         .mount("/", rocket::routes![
             routes::index::index
@@ -59,6 +71,7 @@ pub async fn entry() {
         // Fairings
         .attach(Template::fairing())
         .attach(crate::database::EplDb::fairing())
+        .attach(cors::CORS)
 
         .launch()
         .await
