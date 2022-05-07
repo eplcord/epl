@@ -1,16 +1,11 @@
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::collections::BTreeMap;
-use log::error;
+use std::collections::HashMap;
 
 use rocket::http::Status;
-use rocket::{Request, response};
-use rocket::response::Responder;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
-pub async fn throw_http_error(error: APIErrorCode, error_messages: Vec<(APIErrorField)>) -> Json<APIError> {
+pub async fn throw_http_error(error: APIErrorCode, error_messages: Vec<APIErrorField>) -> Json<APIError> {
     // I really don't like doing this, maybe play around with serde_as more
     let mut error_messages_vec = Vec::<(String, APIErrorField)>::new();
 
