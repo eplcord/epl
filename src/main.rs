@@ -1,14 +1,16 @@
 use diesel::pg::PgConnection;
-use log::info;
+use log::{debug, info};
 use pretty_env_logger;
 use tokio::join;
 
 use options::{EplOptions, Options};
+use crate::util::rustflake;
 
 mod options;
 mod gateway;
 mod http;
 mod database;
+mod util;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -17,8 +19,10 @@ async fn main() {
     pretty_env_logger::init();
 
     let options = EplOptions::get();
+    let mut snowflake_factory = rustflake::Snowflake::default();
 
     info!("Starting epl v{}", VERSION);
+    debug!("Starting on {}", snowflake_factory.generate());
 
     info!("\tName: {}", options.name);
     info!("\tURL: {}", options.url);
