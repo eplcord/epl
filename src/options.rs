@@ -12,6 +12,7 @@ pub struct EplOptions {
     pub redis_addr: String,
     pub lvsp_secret: String,
     pub require_ssl: bool,
+    pub registration: bool
 }
 pub trait Options {
     fn get() -> EplOptions;
@@ -29,6 +30,7 @@ impl Options for EplOptions {
             redis_addr: env::var("REDIS_ADDR").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
             lvsp_secret: env::var("LVSP_SECRET").expect("LVSP_SECRET is required!"),
             require_ssl: env::var("REQUIRE_SSL").unwrap_or_else(|_| "false".to_string()).parse().unwrap(),
+            registration: env::var("REGISTRATION").unwrap_or_else(|_| "false".to_string()).parse().unwrap()
         }
     }
 }

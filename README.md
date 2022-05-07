@@ -63,6 +63,7 @@ Optional:
 |     `REDIS_ADDR`      |                                  Redis database URL                                  |             `redis://127.0.0.1:6379`              |           | `redis://127.0.0.1:6379` |
 |     `LVSP_SECRET`     |      LVSP Shared Secret, can be anything (Must be the same on the LVSP server)       |                   `supersecret`                   |    [x]    |           N/A            |
 |     `REQUIRE_SSL`     |             Whether or not SSL protocols will be used (wss:// https://)              |                       true                        |           |          false           |
+|    `REGISTRATION`     |                        Whether or not registration is allowed                        |                       true                        |           |          false           |
 
 ## Contributing
 Please read the [contributing guide](https://gitlab.com/uwueviee/epl/-/blob/main/CONTRIBUTING.md) and the [code of conduct](https://gitlab.com/uwueviee/epl/-/blob/main/CODE_OF_CONDUCT.md).
