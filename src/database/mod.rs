@@ -1,3 +1,4 @@
+pub mod auth;
 mod models;
 
 use rocket_sync_db_pools::{database};

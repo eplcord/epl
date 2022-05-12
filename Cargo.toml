@@ -40,3 +40,7 @@ serde_with = "1.13.0"
 jsonwebtoken = "8.1.0"
 uuid = { version = "0.8.2", features = ["serde", "v4"] }
 rand = { version = "0.8.5", features = ["std_rng"] }
+
+argon2 = "0.4.0"
+rand_core = { version = "0.6.3", features = ["std"] }
+zxcvbn = "2.2.1"

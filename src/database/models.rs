@@ -15,7 +15,7 @@ pub struct User {
     pub banner: Option<String>,
     pub banner_colour: Option<String>,
     pub avatar_decoration: Option<String>,
-    pub date_of_birth: Option<SystemTime>,
+    pub date_of_birth: Option<chrono::NaiveDate>,
     pub email: String,
     pub phone: Option<String>,
     pub mfa_enabled: bool,
@@ -23,7 +23,7 @@ pub struct User {
     pub flags: i32,
     pub nsfw_allowed: Option<bool>,
     pub purchased_flags: Option<i32>,
-    pub premium_since: Option<SystemTime>,
+    pub premium_since: Option<chrono::NaiveDateTime>,
     pub premium_flags: Option<i32>,
     pub premium_type: Option<i32>
 }

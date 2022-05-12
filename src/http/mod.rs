@@ -54,6 +54,11 @@ pub async fn entry() {
             routes::v9::experiments::science
         ])
 
+        .mount("/api/v9/auth", rocket::routes![
+            routes::v9::auth::register,
+            routes::v9::auth::location_metadata
+        ])
+
         // Legacy API v6 routes
         .mount("/api/v6", rocket::routes![
             routes::v6::experiments::experiments,

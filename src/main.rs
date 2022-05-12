@@ -1,4 +1,5 @@
 #[macro_use] extern crate diesel;
+extern crate core;
 
 use diesel::pg::PgConnection;
 use log::{debug, info};
