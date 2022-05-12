@@ -39,7 +39,9 @@ pub enum APIErrorField {
     #[serde(alias = "login")]
     Login { _errors: Vec<APIErrorMessage> },
     #[serde(alias = "email")]
-    Email { _errors: Vec<APIErrorMessage> }
+    Email { _errors: Vec<APIErrorMessage> },
+    #[serde(alias = "date_of_birth")]
+    DateOfBirth { _errors: Vec<APIErrorMessage> }
 }
 
 impl From<APIErrorField> for String {
@@ -48,7 +50,8 @@ impl From<APIErrorField> for String {
             APIErrorField::Password { .. } => "password",
             APIErrorField::Username { .. } => "username",
             APIErrorField::Login { .. } => "login",
-            APIErrorField::Email { .. } => "email"
+            APIErrorField::Email { .. } => "email",
+            APIErrorField::DateOfBirth { .. } => "date_of_birth"
         }.parse().unwrap()
     }
 }
