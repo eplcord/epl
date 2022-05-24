@@ -14,6 +14,20 @@ Being Litecord compatible also means we will be using Litecord's [LVSP protocol]
 
 Big ol tables of features and their implementation status.
 
+### v1
+(To be filled out)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+|         |        |       |
+
+### v3
+(To be filled out)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+|         |        |       |
+
 ### v6
 (To be filled out)
 

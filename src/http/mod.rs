@@ -43,9 +43,15 @@ pub async fn entry() {
         .mount("/", rocket::routes![
             cors::cors_options
         ])
+
         // Index routes
         .mount("/", rocket::routes![
             routes::index::index
+        ])
+
+        // API v1 routes
+        .mount("/api", rocket::routes![
+            routes::v1::track::track
         ])
 
         // API v9 routes
