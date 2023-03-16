@@ -20,10 +20,10 @@ pub async fn gateway(
 ) -> impl IntoResponse {
     info!("{addr} connected!");
 
-    ws.on_upgrade(move |socket| handle_socket(socket, addr))
+    ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, addr: SocketAddr) {
+async fn handle_socket(mut socket: WebSocket, addr: SocketAddr, state: AppState) {
     // Check connection with socket
     if socket.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
         debug!("Connection with {addr} is ok.")
@@ -42,7 +42,7 @@ async fn handle_socket(mut socket: WebSocket, addr: SocketAddr) {
                         let msg = msg.expect("Bad gateway message from {addr}!");
                         match msg {
                             Text(msg) => {
-                                handle_op(msg, &mut sender).await;
+                                handle_op(msg, &mut sender, &state).await;
                             },
                             Close(_msg) => {
                                 info!("bye bye {addr}");

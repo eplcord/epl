@@ -16,6 +16,7 @@ use zxcvbn::zxcvbn;
 use crate::util::gen_token;
 
 use sea_orm::*;
+use crate::database::entities::session::Model;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -58,6 +59,40 @@ pub async fn generate_session(conn: &DatabaseConnection, user: i64) -> Result<St
         })?;
 
     Ok(token)
+}
+
+#[derive(Debug, Clone)]
+pub struct GetSessionError {
+    pub kind: GetSessionEnum,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum GetSessionEnum {
+    SeaORM,
+    BadUser,
+}
+
+pub async fn get_user_from_session(conn: &DatabaseConnection, token: String) -> Result<user::Model, GetSessionError> {
+    let session: Option<session::Model> = Session::find_by_id(&token).one(conn).await.expect("Failed to access db!");
+
+    return match session {
+        None => {
+            Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() })
+        }
+        Some(session) => {
+            let user: Option<user::Model> = User::find_by_id(session.user_id).one(conn).await.expect("Failed to access db!");
+
+            match user {
+                None => {
+                    Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "User not found!".to_string() })
+                }
+                Some(user) => {
+                    Ok(user)
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
