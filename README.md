@@ -50,7 +50,7 @@ Required:
 
 Optional:
  * [mediaproxy](https://gitlab.com/litecord/mediaproxy)
- * [An LVSP Server](https://gitlab.com/uwueviee/bannana-pho)
+ * [An LVSP Server](https://git.gaycatgirl.sex/litecord/bannana-pho)
 
 #### Development
 Required:
@@ -60,7 +60,7 @@ Required:
 
 Optional:
  * [mediaproxy](https://gitlab.com/litecord/mediaproxy)
- * [An LVSP Server](https://gitlab.com/uwueviee/bannana-pho)
+ * [An LVSP Server](https://git.gaycatgirl.sex/litecord/bannana-pho)
 
 ## Configuration
 
@@ -80,6 +80,6 @@ Optional:
 |    `REGISTRATION`     |                        Whether or not registration is allowed                        |                       true                        |           |          false           |
 
 ## Contributing
-Please read the [contributing guide](https://gitlab.com/uwueviee/epl/-/blob/main/CONTRIBUTING.md) and the [code of conduct](https://gitlab.com/uwueviee/epl/-/blob/main/CODE_OF_CONDUCT.md).
+Please read the [contributing guide](https://git.gaycatgirl.sex/litecord/epl/src/branch/main/CONTRIBUTING.md) and the [code of conduct](https://git.gaycatgirl.sex/litecord/epl/src/branch/main/CODE_OF_CONDUCT.md).
 
 Especially the commit message style guidelines.

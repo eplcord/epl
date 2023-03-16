@@ -23,7 +23,7 @@ impl Options for EplOptions {
             name: env::var("NAME").unwrap_or_else(|_| "Epl".to_string()),
             url: env::var("URL").expect("URL is required!"),
             gateway_url: env::var("GATEWAY_URL").expect("GATEWAY_URL is required!"),
-            mediaproxy_url: Option::from(env::var("MEDIAPROXY_URL").ok()),
+            mediaproxy_url: env::var("MEDIAPROXY_URL").ok(),
             http_listen_addr: env::var("HTTP_LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3926".to_string()),
             gateway_listen_addr: env::var("GATEWAY_LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:5001".to_string()),
             database_url: env::var("DATABASE_URL").expect("DATABASE_URL is required!"),
