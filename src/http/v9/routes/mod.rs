@@ -3,11 +3,13 @@ mod auth;
 
 use axum::Router;
 use axum::routing::{get, post};
-use crate::http::v9::routes::auth::{location_metadata, register};
+use crate::http::v9::routes::auth::{location_metadata, login, register};
 
 pub fn assemble_routes() -> Router {
     let auth = Router::new()
         .route("/location-metadata", get(location_metadata))
+
+        .route("/login", post(login))
         .route("/register", post(register));
 
     Router::new()

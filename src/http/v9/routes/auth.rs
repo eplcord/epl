@@ -1,10 +1,11 @@
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{Extension, Json};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use chrono::Datelike;
 use rand::Rng;
 use rand::rngs::StdRng;
-use sea_orm::ActiveValue;
+use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
@@ -166,7 +167,7 @@ pub async fn register(
         premium_since: Default::default(),
     };
 
-    let user = create_user(&state.conn, new_user).await;
+    let user =  create_user(&state.conn, new_user).await;
 
     let user_id = match user {
         Ok(user) => user,
@@ -184,11 +185,91 @@ pub async fn register(
         }
     };
 
-    let token = generate_session(&state.conn, user_id.clone());
-
-    let token = token.await.unwrap();
+    let token = generate_session(&state.conn, user_id.clone()).await.unwrap();
 
     info!("New account registered: {}", user_id);
 
     Ok(Json(RegisterResponse{ token }))
+}
+
+#[derive(Deserialize)]
+pub struct LoginReq {
+    pub login: String,
+    pub password: String
+}
+
+#[derive(Serialize)]
+pub struct LoginRes {
+    pub token: String
+}
+
+pub async fn login(
+    Extension(state): Extension<AppState>,
+    data: Json<LoginReq>
+) -> impl IntoResponse {
+    let mut error = Vec::new();
+
+    // Check if user exists
+    let requested_user: Option<user::Model> = User::find()
+        .filter(user::Column::Email.eq(&data.login))
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let requested_user = match requested_user {
+        None => {
+            error.push(APIErrorField::Email {
+                _errors: vec![
+                    APIErrorMessage {
+                        code: "INVALID_LOGIN".to_string(),
+                        message: "Login or password is invalid.".to_string()
+                    }
+                ]
+            });
+
+            error.push(APIErrorField::Password {
+                _errors: vec![
+                    APIErrorMessage {
+                        code: "INVALID_LOGIN".to_string(),
+                        message: "Login or password is invalid.".to_string()
+                    }
+                ]
+            });
+
+            return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await));
+        }
+        Some(user) => {
+            user
+        }
+    };
+
+    // Verify password
+    let password_hash = PasswordHash::new(&requested_user.password_hash).expect("Failed to parse password hash!");
+
+    if Argon2::default().verify_password(data.password.as_bytes(), &password_hash).is_err() {
+        error.push(APIErrorField::Email {
+            _errors: vec![
+                APIErrorMessage {
+                    code: "INVALID_LOGIN".to_string(),
+                    message: "Login or password is invalid.".to_string()
+                }
+            ]
+        });
+
+        error.push(APIErrorField::Password {
+            _errors: vec![
+                APIErrorMessage {
+                    code: "INVALID_LOGIN".to_string(),
+                    message: "Login or password is invalid.".to_string()
+                }
+            ]
+        });
+
+        return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await));
+    }
+
+    // Generate session
+    let token = generate_session(&state.conn, requested_user.id.clone()).await.unwrap();
+
+    Ok(Json(LoginRes { token }))
 }

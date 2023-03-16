@@ -54,7 +54,7 @@ Optional:
 
 #### Development
 Required:
- * Rust (1.56+)
+ * Rust (1.65+)
  * [seaorm cli](https://www.sea-ql.org/SeaORM/) (`cargo install sea-orm-cli`)
 
 Optional:
