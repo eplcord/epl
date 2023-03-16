@@ -1,40 +1,63 @@
-use std::convert::Infallible;
 use std::net::SocketAddr;
-use std::str::FromStr;
 
-use diesel::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool};
-use log::info;
-use rocket::futures::StreamExt;
-use warp::Filter;
-use warp::ws::WebSocket;
+use axum::{Extension, extract::ws::{Message, WebSocket, WebSocketUpgrade}, extract::ws::Message::{Text, Close, Ping, Pong}, response::IntoResponse};
+use axum::extract::connect_info::ConnectInfo;
 
-use crate::{EplOptions, Options};
+use futures::stream::StreamExt;
+
+use tracing::{debug, info};
+use crate::AppState;
+
 use crate::gateway::handle_op::handle_op;
 
 mod schema;
 mod handle_op;
 
-type ConnectionPool = diesel::r2d2::Pool<ConnectionManager<PgConnection>>;
+pub async fn gateway(
+    ws: WebSocketUpgrade,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(state): Extension<AppState>
+) -> impl IntoResponse {
+    info!("{addr} connected!");
 
-fn with_pool(
-    pool: ConnectionPool,
-) -> impl Filter<Extract = (ConnectionPool,), Error = Infallible> + Clone {
-    warp::any().map(move || pool.clone())
+    ws.on_upgrade(move |socket| handle_socket(socket, addr))
 }
 
-async fn accept(ws: WebSocket, pool: ConnectionPool) {
-    let (mut write, mut read) = ws.split();
+async fn handle_socket(mut socket: WebSocket, addr: SocketAddr) {
+    // Check connection with socket
+    if socket.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
+        debug!("Connection with {addr} is ok.")
+    } else {
+        debug!("Could not ping {addr}, dropping.");
+        return;
+    }
+
+    let (mut sender, mut receiver) = socket.split();
+
     loop {
         tokio::select! {
-            msg = read.next() => {
+            msg = receiver.next() => {
                 match msg {
                     Some(msg) => {
-                        let msg = msg.expect("Bad gateway message!");
-                        if msg.is_text() {
-                            handle_op(msg, &mut write).await;
-                        } else if msg.is_close() {
-                            break;
+                        let msg = msg.expect("Bad gateway message from {addr}!");
+                        match msg {
+                            Text(msg) => {
+                                handle_op(msg, &mut sender).await;
+                            },
+                            Close(_msg) => {
+                                info!("bye bye {addr}");
+                                break;
+                            },
+                            Ping(_msg) => {
+                                debug!("Ping from {addr}")
+                            },
+                            Pong(_msg) => {
+                                debug!("Pong from {addr}")
+                            }
+                            _ => {
+                                debug!("Bad gateway message from {addr}!");
+                                break;
+                            }
                         }
                     }
                     None => break,
@@ -42,22 +65,4 @@ async fn accept(ws: WebSocket, pool: ConnectionPool) {
             }
         }
     }
-}
-
-pub async fn entry(db_pool: Pool<ConnectionManager<PgConnection>>) {
-    info!("Hello from the Gateway!");
-
-    let options = EplOptions::get();
-
-    let socket = warp::path::end()
-        .and(warp::ws())
-        .and(with_pool(db_pool.clone()))
-        .map(|ws: warp::ws::Ws, db_pool: Pool<ConnectionManager<PgConnection>> | {
-            ws.on_upgrade(move |socket | accept(socket, db_pool))
-        });
-    info!("Gateway is active on {}!", &options.gateway_listen_addr);
-
-    warp::serve(socket).run(SocketAddr::from_str(&options.gateway_listen_addr)
-        .expect("Failed to start Gateway!"))
-        .await;
 }

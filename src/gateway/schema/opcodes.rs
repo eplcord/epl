@@ -1,7 +1,6 @@
-use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use warp::ws::Message;
+use tracing::debug;
 
 use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::identify::Identify;
@@ -22,10 +21,9 @@ pub enum GatewayData {
     IDENTIFY(Identify)
 }
 
-pub fn get_opcode(msg: Message) -> Result<(OpCodes, GatewayData), ()> {
-    let msg = msg.to_str().unwrap();
+pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
     debug!("Decoding message: {}", &msg);
-    let message_json: Result<GatewayMessage, serde_json::Error> = serde_json::from_str(msg);
+    let message_json: Result<GatewayMessage, serde_json::Error> = serde_json::from_str(&msg);
 
     if message_json.is_ok() {
         let output = message_json.unwrap();

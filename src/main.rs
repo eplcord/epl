@@ -1,26 +1,32 @@
-#[macro_use] extern crate diesel;
 extern crate core;
 
-use diesel::pg::PgConnection;
-use log::{debug, info};
-use pretty_env_logger;
-use tokio::join;
+use std::net::SocketAddr;
+use axum::http::Method;
+use axum::{Extension, Router};
+use axum::routing::get;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use tower_http::cors::{Any, CorsLayer};
+use tracing::{debug, info, log};
+use askama::Template;
 
 use options::{EplOptions, Options};
+use crate::gateway::gateway;
+use crate::http::api;
 use crate::util::rustflake;
+
+use migration::{Migrator, MigratorTrait};
 
 mod options;
 mod gateway;
 mod http;
 mod database;
 mod util;
-mod schema;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[rocket::main]
+#[tokio::main]
 async fn main() {
-    pretty_env_logger::init();
+    tracing_subscriber::fmt::init();
 
     let options = EplOptions::get();
     let mut snowflake_factory = rustflake::Snowflake::default();
@@ -34,30 +40,75 @@ async fn main() {
     if options.mediaproxy_url.is_some() {
         info!("\tMediaproxy URL: {}", options.mediaproxy_url.unwrap());
     }
-    info!("\tHTTP Listen Address: {}", options.http_listen_addr);
-    info!("\tGateway Listen Address: {}", options.gateway_listen_addr);
+    info!("\tListen Address: {}", options.listen_addr);
     info!("\tRequire SSL: {}", options.require_ssl);
 
-    // Even though Rocket will handle its own database pool, we will still need one for the Gateway
-    // We might consider just using this pool and plugging it into Rocket's state in the future
     info!("Connecting to database");
-    let db_manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(options.database_url);
-    let db_pool = diesel::r2d2::Pool::builder()
-        .max_size(12) // Keep this in sync with Rocket (Move it to env?)
-        .build(db_manager)
+
+    let mut migration_db_opt = migration::sea_orm::ConnectOptions::new(options.database_url.clone());
+    migration_db_opt.sqlx_logging_level(log::LevelFilter::Debug);
+
+    info!("Checking for migrations needed");
+    let migrator_conn = migration::sea_orm::Database::connect(migration_db_opt)
+        .await
         .expect("Failed to connect to the database!");
+    Migrator::up(&migrator_conn, None)
+        .await
+        .expect("Failed to run migrations!");
 
-    info!("Spawning HTTP API");
-    let http = tokio::spawn(async {
-        http::entry().await
-    });
+    let mut db_opt = ConnectOptions::new(options.database_url.clone());
+    db_opt.sqlx_logging_level(log::LevelFilter::Debug);
 
-    info!("Spawning Gateway");
-    let gateway = tokio::spawn( async move {
-        gateway::entry(db_pool).await
-    });
+    let conn: DatabaseConnection = Database::connect(db_opt)
+        .await
+        .expect("Failed to connect to database!");
 
-    let res = join!(http, gateway);
-    res.0.expect("Failed to join the HTTP API server!");
-    res.1.expect("Failed to join the Gateway server!")
+    info!("Connected to database");
+
+    info!("Starting server");
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS])
+        .allow_headers(Any);
+
+    let app_state = AppState { conn };
+
+    let app = Router::new()
+        .nest("/api", api())
+        .route("/ws", get(gateway))
+
+        .route("/", get(index))
+
+        .layer(cors)
+        .layer(Extension(app_state));
+
+    let addr: SocketAddr = options.listen_addr
+        .parse()
+        .expect("Unable to parse listen address!");
+
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+        .await
+        .expect("Failed to start the server!");
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    conn: DatabaseConnection,
+}
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {
+    instance_name: String,
+    version: String,
+}
+
+async fn index() -> IndexTemplate {
+    let options = EplOptions::get();
+
+    IndexTemplate {
+        instance_name: options.name.to_string(),
+        version: VERSION.to_string()
+    }
 }

@@ -1,19 +1,21 @@
-use std::time::SystemTime;
-
-use diesel::Insertable;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{sessions, users};
+use crate::database::entities::{prelude::*, *};
 
 use argon2::{
     password_hash::{
         rand_core::OsRng,
-        PasswordHash, PasswordHasher, PasswordVerifier, SaltString
+        PasswordHasher, SaltString
     },
     Argon2
 };
+use chrono::{Days, Utc};
+use sea_orm::{ActiveValue, DatabaseConnection};
 
 use zxcvbn::zxcvbn;
+use crate::util::gen_token;
+
+use sea_orm::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -21,15 +23,6 @@ struct Claims {
     sub: String,
     exp: usize,
     iat: usize
-}
-
-#[derive(Insertable, Clone)]
-#[table_name="sessions"]
-pub struct NewSession {
-    pub uuid: uuid::Uuid,
-    pub user_id: i64,
-    pub iat: SystemTime,
-    pub exp: SystemTime
 }
 
 #[derive(Debug, Clone)]
@@ -40,54 +33,31 @@ pub struct NewSessionError {
 
 #[derive(Debug, Clone)]
 pub enum NewSessionEnum {
-    Diesel,
+    SeaORM,
     BadUser,
 }
 
-impl From<diesel::result::Error> for NewSessionError {
-    fn from(error: diesel::result::Error) -> Self {
-        NewSessionError {
-            kind: NewSessionEnum::Diesel,
-            message: error.to_string(),
-        }
-    }
-}
-
 /// Creates a new session for the specified user, returns the JWT
-pub fn generate_session(conn: &diesel::PgConnection, user: i64) -> Result<String, NewSessionError> {
-    use diesel::prelude::*;
+pub async fn generate_session(conn: &DatabaseConnection, user: i64) -> Result<String, NewSessionError> {
+    let current_time = Utc::now().naive_utc();
+    let expiry_time = current_time.checked_add_days(Days::new(30)).expect("Time has broken!");
+    let token = gen_token();
 
-    let current_time = SystemTime::now();
-    let expiry_time = current_time + std::time::Duration::from_secs(60 * 60 * 24 * 30);
-    let uuid = uuid::Uuid::new_v4();
-
-    let new_session = NewSession {
-        uuid: uuid.clone(),
-        user_id: user.clone(),
-        iat: current_time.clone(),
-        exp: expiry_time.clone()
+    let new_session = session::ActiveModel {
+        token: ActiveValue::Set(token.clone()),
+        user_id: ActiveValue::Set(user),
+        iat: ActiveValue::Set(current_time),
+        exp: ActiveValue::Set(expiry_time)
     };
 
-    diesel::insert_into(sessions::table)
-        .values(new_session.clone())
-        .execute(&*conn)
+    Session::insert(new_session)
+        .exec(conn)
+        .await
         .map_err(|err| {
-            return NewSessionError { kind: NewSessionEnum::Diesel, message: err.to_string() }
+            return NewSessionError { kind: NewSessionEnum::SeaORM, message: err.to_string() }
         })?;
 
-    Ok(uuid.to_string())
-}
-
-#[derive(Insertable, Clone)]
-#[table_name="users"]
-pub struct NewUser {
-    pub id: i64,
-    pub username: String,
-    pub discriminator: String,
-    pub email: String,
-    pub password_hash: String,
-    pub date_of_birth: chrono::NaiveDateTime,
-    pub nsfw_allowed: bool,
+    Ok(token)
 }
 
 #[derive(Debug, Clone)]
@@ -98,22 +68,13 @@ pub struct NewUserError {
 
 #[derive(Debug, Clone)]
 pub enum NewUserEnum {
-    Diesel,
+    SeaORM,
     BadUsername,
     BadPassword,
     WeakPassword,
     TooShortPassword,
     TooLongPassword,
     BadEmail,
-}
-
-impl From<diesel::result::Error> for NewUserError {
-    fn from(error: diesel::result::Error) -> Self {
-        NewUserError {
-            kind: NewUserEnum::Diesel,
-            message: error.to_string(),
-        }
-    }
 }
 
 impl From<argon2::password_hash::Error> for NewUserError {
@@ -126,17 +87,15 @@ impl From<argon2::password_hash::Error> for NewUserError {
 }
 
 /// Creates a new user in the database, returns the ID of the user
-pub fn create_user(conn: &diesel::PgConnection, data: NewUser) -> Result<i64, NewUserError> {
-    use diesel::prelude::*;
-
-    diesel::insert_into(users::table)
-        .values(data.clone())
-        .execute(&*conn)
+pub async fn create_user(conn: &DatabaseConnection, data: user::ActiveModel) -> Result<i64, NewUserError> {
+    User::insert(data.clone())
+        .exec(conn)
+        .await
         .map_err(|err| {
-            return NewUserError { kind: NewUserEnum::Diesel, message: err.to_string() }
+            return NewUserError { kind: NewUserEnum::SeaORM, message: err.to_string() }
         })?;
 
-    Ok(data.id)
+    Ok(data.id.unwrap())
 }
 
 /// Generates a password hash using the Argon2id algorithm
