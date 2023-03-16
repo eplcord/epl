@@ -7,8 +7,9 @@ use crate::gateway::schema::identify::Identify;
 use futures::stream::SplitSink;
 use futures::SinkExt;
 use crate::AppState;
-use crate::database::auth::{get_user_from_session, GetSessionError};
+use crate::database::auth::{get_user_from_session};
 use crate::database::entities::user::Model;
+use crate::state::{GATEWAY_STATE, GatewayState};
 
 pub async fn handle_identify(data: Identify, write: &mut SplitSink<WebSocket, Message>, state: &AppState) {
     debug!("Hello from handle_identify!");
@@ -26,7 +27,17 @@ pub async fn handle_identify(data: Identify, write: &mut SplitSink<WebSocket, Me
 
     debug!("{}#{} ({}) has authed in handle_identify", &user.username, &user.discriminator, &user.id);
 
-    write.send(Message::Close(Some(CloseFrame { code: ErrorCode::AuthenticationFailed.into(), reason: ErrorCode::AuthenticationFailed.into() })))
-        .await
-        .expect("Failed to close websocket!");
+    // Initialise state
+    let state = GATEWAY_STATE.get();
+
+    state.set(GatewayState {
+        user_id: user.id,
+        bot: false,
+        compress: false,
+        large_threshold: 0,
+        current_shard: 0,
+        shard_count: 0,
+        intents: 0,
+        sender: write,
+    });
 }

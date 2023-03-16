@@ -8,10 +8,11 @@ use futures::stream::StreamExt;
 use tracing::{debug, info};
 use crate::AppState;
 
-use crate::gateway::handle_op::handle_op;
+use crate::gateway::handle::handle_op;
 
 mod schema;
-mod handle_op;
+mod handle;
+mod dispatch;
 
 pub async fn gateway(
     ws: WebSocketUpgrade,

@@ -26,6 +26,9 @@ tower-http = { version = "*", features = ["cors"] }
 askama = { version = "0.12.0", features = ["with-axum"] }
 askama_axum = "0.3.0"
 
+## Gateway
+state = { version = "^0.5", features = ["tls"] }
+
 futures = "0.3.27"
 
 ## Database

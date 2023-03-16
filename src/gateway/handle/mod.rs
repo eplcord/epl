@@ -1,6 +1,8 @@
+mod identify;
+
 use tracing::debug;
 
-use crate::gateway::handle_op::handle_identify::handle_identify;
+use crate::gateway::handle::identify::handle_identify;
 use crate::gateway::schema::error_codes::ErrorCode;
 use crate::gateway::schema::opcodes::{GatewayData, get_opcode, OpCodes};
 
@@ -10,8 +12,6 @@ use futures::stream::SplitSink;
 
 use futures::SinkExt;
 use crate::AppState;
-
-mod handle_identify;
 
 pub async fn handle_op(msg: String, mut write: &mut SplitSink<WebSocket, Message>, state: &AppState){
     let op = get_opcode(msg.clone());

@@ -21,6 +21,7 @@ mod gateway;
 mod http;
 mod database;
 mod util;
+mod state;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
