@@ -55,9 +55,7 @@ impl From<APIErrorField> for String {
             APIErrorField::Login { .. } => "login",
             APIErrorField::Email { .. } => "email",
             APIErrorField::DateOfBirth { .. } => "date_of_birth",
-        }
-            .parse()
-            .unwrap()
+        }.parse().unwrap()
     }
 }
 

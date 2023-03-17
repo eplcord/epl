@@ -31,7 +31,7 @@ pub async fn handle_op(msg: String, state: &AppState){
             }
             OpCodes::IDENTIFY => {
                 if let GatewayData::IDENTIFY(data) = op.1 {
-                    handle_identify(data, state).await;
+                    handle_identify(*data, state).await;
                 } else {
                     let mut socket = SOCKET.get().lock().await;
 

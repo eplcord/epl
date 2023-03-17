@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::sync::Arc;
 use axum::extract::ws::WebSocket;
 use state::LocalStorage;

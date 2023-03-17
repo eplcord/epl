@@ -55,7 +55,7 @@ pub async fn generate_session(conn: &DatabaseConnection, user: i64) -> Result<St
         .exec(conn)
         .await
         .map_err(|err| {
-            return NewSessionError { kind: NewSessionEnum::SeaORM, message: err.to_string() }
+            NewSessionError { kind: NewSessionEnum::SeaORM, message: err.to_string() }
         })?;
 
     Ok(token)
@@ -76,7 +76,7 @@ pub enum GetSessionEnum {
 pub async fn get_user_from_session(conn: &DatabaseConnection, token: String) -> Result<user::Model, GetSessionError> {
     let session: Option<session::Model> = Session::find_by_id(&token).one(conn).await.expect("Failed to access db!");
 
-    return match session {
+    match session {
         None => {
             Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() })
         }
@@ -127,7 +127,7 @@ pub async fn create_user(conn: &DatabaseConnection, data: user::ActiveModel) -> 
         .exec(conn)
         .await
         .map_err(|err| {
-            return NewUserError { kind: NewUserEnum::SeaORM, message: err.to_string() }
+            NewUserError { kind: NewUserEnum::SeaORM, message: err.to_string() }
         })?;
 
     Ok(data.id.unwrap())

@@ -132,17 +132,13 @@ pub async fn register(
     let mut rng: StdRng = rand::SeedableRng::from_entropy();
 
     let new_user_id = snowflake_factory.generate();
-    let new_user_discriminator: i16 = rng.gen_range(0001..9999);
+    let new_user_discriminator: i16 = rng.gen_range(1..9999);
 
     // Check if NSFW channels should be allowed
-    let nsfw_allowed = if date_of_birth.unwrap().year() >= (chrono::Local::now().year() - 18) {
-        false
-    } else {
-        true
-    };
+    let nsfw_allowed = date_of_birth.unwrap().year() < (chrono::Local::now().year() - 18);
 
     let new_user = user::ActiveModel {
-        id: ActiveValue::Set(new_user_id.clone()),
+        id: ActiveValue::Set(new_user_id),
         system: Default::default(),
         bot: Default::default(),
         username: ActiveValue::Set(data.0.username),
@@ -185,7 +181,7 @@ pub async fn register(
         }
     };
 
-    let token = generate_session(&state.conn, user_id.clone()).await.unwrap();
+    let token = generate_session(&state.conn, user_id).await.unwrap();
 
     info!("New account registered: {}", user_id);
 
@@ -269,7 +265,7 @@ pub async fn login(
     }
 
     // Generate session
-    let token = generate_session(&state.conn, requested_user.id.clone()).await.unwrap();
+    let token = generate_session(&state.conn, requested_user.id).await.unwrap();
 
     Ok(Json(LoginRes { token }))
 }

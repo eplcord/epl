@@ -6,6 +6,7 @@ pub(crate) mod opcodes;
 pub(crate) mod identify;
 pub(crate) mod presence;
 pub(crate) mod error_codes;
+pub(crate) mod ready;
 
 #[derive(Deserialize, Serialize)]
 pub struct GatewayMessage {

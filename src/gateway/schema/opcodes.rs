@@ -18,14 +18,14 @@ pub enum OpCodes {
 pub enum GatewayData {
     DISPATCH,
     HEARTBEAT,
-    IDENTIFY(Identify)
+    IDENTIFY(Box<Identify>)
 }
 
 pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
     debug!("Decoding message: {}", &msg);
     let message_json: Result<GatewayMessage, serde_json::Error> = serde_json::from_str(&msg);
 
-    if message_json.is_ok() {
+    if let Ok(..) = message_json {
         let output = message_json.unwrap();
 
         debug!("Decoded as Op: {:?}", &output.op);

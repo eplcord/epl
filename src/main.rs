@@ -109,7 +109,7 @@ async fn index() -> IndexTemplate {
     let options = EplOptions::get();
 
     IndexTemplate {
-        instance_name: options.name.to_string(),
+        instance_name: options.name,
         version: VERSION.to_string()
     }
 }

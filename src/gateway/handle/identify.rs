@@ -30,11 +30,14 @@ pub async fn handle_identify(data: Identify, state: &AppState) {
     debug!("{}#{} ({}) has authed in handle_identify", &user.username, &user.discriminator, &user.id);
 
     // Initialise state
+
+    // TODO: calculate these
+
     let state = Arc::new(Mutex::new(GatewayState {
         user_id: user.id,
-        bot: false,
-        compress: false,
-        large_threshold: 0,
+        bot: user.bot,
+        compress: data.compress.unwrap_or(false),
+        large_threshold: 50,
         current_shard: 0,
         shard_count: 0,
         intents: 0
