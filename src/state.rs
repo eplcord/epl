@@ -1,10 +1,10 @@
 use std::cell::Cell;
-use std::collections::HashMap;
-use axum::extract::ws::{Message, WebSocket};
-use futures::stream::SplitSink;
+use std::sync::Arc;
+use axum::extract::ws::WebSocket;
 use state::LocalStorage;
+use tokio::sync::Mutex;
 
-pub struct GatewayState<'a> {
+pub struct GatewayState {
     pub(crate) user_id: i64,
     pub(crate) bot: bool,
     pub(crate) compress: bool,
@@ -12,7 +12,12 @@ pub struct GatewayState<'a> {
     pub(crate) current_shard: i8,
     pub(crate) shard_count: i8,
     pub(crate) intents: i8,
-    pub(crate) sender: &'a mut SplitSink<WebSocket, Message>
 }
 
-pub static GATEWAY_STATE: LocalStorage<Cell<GatewayState>> = LocalStorage::new();
+pub struct WebSocketWrapper {
+    pub inner: WebSocket,
+}
+
+pub static GATEWAY_STATE: LocalStorage<Arc<Mutex<GatewayState>>> = LocalStorage::new();
+
+pub static SOCKET: LocalStorage<Arc<Mutex<WebSocketWrapper>>> = LocalStorage::new();
