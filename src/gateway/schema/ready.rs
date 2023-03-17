@@ -8,4 +8,10 @@ pub struct Ready {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct ReadySupplemental {
+    user_settings: ReadyStub,
+    notes: Vec<ReadyStub>
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ReadyStub { }
