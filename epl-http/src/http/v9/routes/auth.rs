@@ -8,11 +8,13 @@ use rand::rngs::StdRng;
 use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
+use epl_common::options::{EplOptions, Options};
 
-use crate::database::entities::{prelude::*, *};
+use epl_common::database::entities::{prelude::*, *};
 
-use crate::{AppState, EplOptions, Options, rustflake};
-use crate::database::auth::{create_user, generate_password_hash, generate_session, NewUserEnum};
+use crate::AppState;
+use epl_common::rustflake;
+use epl_common::database::auth::{create_user, generate_password_hash, generate_session, NewUserEnum};
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
 
 pub async fn location_metadata() -> &'static str {

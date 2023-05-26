@@ -17,6 +17,7 @@ pub struct WebSocketWrapper {
     pub inner: WebSocket,
 }
 
-pub static GATEWAY_STATE: LocalStorage<Arc<Mutex<GatewayState>>> = LocalStorage::new();
+pub static GATEWAY_STATE: LocalStorage<Arc<Mutex<Option<GatewayState>>>> = LocalStorage::new();
 
-pub static SOCKET: LocalStorage<Arc<Mutex<WebSocketWrapper>>> = LocalStorage::new();
+pub static SOCKET: LocalStorage<Arc<Mutex<Option<WebSocketWrapper>>>> = LocalStorage::new();
+

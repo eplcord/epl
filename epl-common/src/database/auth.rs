@@ -13,10 +13,9 @@ use chrono::{Days, Utc};
 use sea_orm::{ActiveValue, DatabaseConnection};
 
 use zxcvbn::zxcvbn;
-use crate::util::gen_token;
+use crate::gen_token;
 
 use sea_orm::*;
-use crate::database::entities::session::Model;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -73,25 +72,28 @@ pub enum GetSessionEnum {
     BadUser,
 }
 
-pub async fn get_user_from_session(conn: &DatabaseConnection, token: String) -> Result<user::Model, GetSessionError> {
-    let session: Option<session::Model> = Session::find_by_id(&token).one(conn).await.expect("Failed to access db!");
+pub async fn get_user_from_session(conn: &DatabaseConnection, token: &String) -> Result<user::Model, GetSessionError> {
+    let session: Option<session::Model> = Session::find_by_id(token).one(conn).await.expect("Failed to access db!");
 
     match session {
-        None => {
-            Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() })
-        }
+        None => Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() }),
         Some(session) => {
             let user: Option<user::Model> = User::find_by_id(session.user_id).one(conn).await.expect("Failed to access db!");
 
             match user {
-                None => {
-                    Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "User not found!".to_string() })
-                }
-                Some(user) => {
-                    Ok(user)
-                }
+                None => Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "User not found!".to_string() }),
+                Some(user) => Ok(user)
             }
         }
+    }
+}
+
+pub async fn get_session(conn: &DatabaseConnection, token: &String) -> Result<session::Model,GetSessionError> {
+    let session: Option<session::Model> = Session::find_by_id(token).one(conn).await.expect("Failed to access db!");
+
+    match session {
+        None => Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() }),
+        Some(session) => Ok(session)
     }
 }
 

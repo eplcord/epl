@@ -9,19 +9,13 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, info, log};
 use askama::Template;
 
-use options::{EplOptions, Options};
-use crate::gateway::gateway;
+use epl_common::options::{EplOptions, Options};
 use crate::http::api;
-use crate::util::rustflake;
+use epl_common::rustflake;
 
 use migration::{Migrator, MigratorTrait};
 
-mod options;
-mod gateway;
 mod http;
-mod database;
-mod util;
-mod state;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -32,7 +26,7 @@ async fn main() {
     let options = EplOptions::get();
     let mut snowflake_factory = rustflake::Snowflake::default();
 
-    info!("Starting epl v{}", VERSION);
+    info!("Starting epl-http v{}", VERSION);
     debug!("Starting on {}", snowflake_factory.generate());
 
     info!("\tName: {}", options.name);
@@ -76,7 +70,6 @@ async fn main() {
 
     let app = Router::new()
         .nest("/api", api())
-        .route("/ws", get(gateway))
 
         .route("/", get(index))
 

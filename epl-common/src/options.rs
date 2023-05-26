@@ -23,7 +23,7 @@ impl Options for EplOptions {
             url: env::var("URL").expect("URL is required!"),
             gateway_url: env::var("GATEWAY_URL").expect("GATEWAY_URL is required!"),
             mediaproxy_url: env::var("MEDIAPROXY_URL").ok(),
-            listen_addr: env::var("HTTP_LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3926".to_string()),
+            listen_addr: env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3926".to_string()),
             database_url: env::var("DATABASE_URL").expect("DATABASE_URL is required!"),
             redis_addr: env::var("REDIS_ADDR").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
             lvsp_secret: env::var("LVSP_SECRET").expect("LVSP_SECRET is required!"),

@@ -9,6 +9,7 @@ use crate::gateway::schema::opcodes::{GatewayData, get_opcode, OpCodes};
 use axum::extract::ws::{Message, CloseFrame};
 
 use crate::AppState;
+use crate::gateway::schema::GatewayMessage;
 use crate::state::SOCKET;
 
 pub async fn handle_op(msg: String, state: &AppState){
@@ -17,17 +18,19 @@ pub async fn handle_op(msg: String, state: &AppState){
         let op = op.unwrap();
 
         match op.0 {
-            OpCodes::DISPATCH => {
-                debug!("DISPATCH");
-                let mut socket = SOCKET.get().lock().await;
-
-                socket.inner.send(axum::extract::ws::Message::Text(msg)).await.expect("Failed to send message to gateway!");
-            }
             OpCodes::HEARTBEAT => {
-                debug!("HEARTBEAT");
                 let mut socket = SOCKET.get().lock().await;
 
-                socket.inner.send(axum::extract::ws::Message::Text(msg)).await.expect("Failed to send message to gateway!");
+                socket.as_mut().unwrap().inner.send(Message::Text(
+                    serde_json::to_string(&GatewayMessage {
+                        op: OpCodes::HEARTBEAT_ACK,
+                        d: None,
+                        s: None,
+                        t: None,
+                    })
+                        .expect("Failed to serialize heartbeat ack!"),
+                )
+                ).await.expect("Failed to send ack to heartbeat!");
             }
             OpCodes::IDENTIFY => {
                 if let GatewayData::IDENTIFY(data) = op.1 {
@@ -35,17 +38,16 @@ pub async fn handle_op(msg: String, state: &AppState){
                 } else {
                     let mut socket = SOCKET.get().lock().await;
 
-                    socket.inner.send(Message::Close(Some(CloseFrame { code: ErrorCode::DecodeError.into(), reason: ErrorCode::DecodeError.into() })))
+                    socket.as_mut().unwrap().inner.send(Message::Close(Some(CloseFrame { code: ErrorCode::DecodeError.into(), reason: ErrorCode::DecodeError.into() })))
                         .await
                         .expect("Failed to close websocket!");
                 }
             }
+            _ => {
+                debug!("Got an OP code that I don't have implemented!");
+            }
         }
     } else {
-        let mut socket = SOCKET.get().lock().await;
-
-        socket.inner.send(Message::Close(Some(CloseFrame { code: ErrorCode::UnknownOpCode.into(), reason: ErrorCode::UnknownOpCode.into() })))
-            .await
-            .expect("Failed to close websocket!");
+        debug!("Got an OP code that I don't understand!");
     }
 }

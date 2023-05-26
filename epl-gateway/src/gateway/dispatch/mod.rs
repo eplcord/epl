@@ -3,6 +3,7 @@ use crate::gateway::schema::opcodes::OpCodes;
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
 
 pub(crate) mod ready;
+pub(crate) mod ready_supplemental;
 
 #[derive(Deserialize, Serialize)]
 pub struct DispatchOp {
