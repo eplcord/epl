@@ -50,7 +50,7 @@ pub struct User {
     pub mfa_enabled: bool,
     pub id: String,
     pub global_name: Option<String>,
-    pub flags: i32,
+    pub flags: i64,
     pub email: String,
     pub display_name: Option<String>,
     pub discriminator: String,

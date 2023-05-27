@@ -32,7 +32,7 @@ pub struct Model {
     pub phone: Option<String>,
     pub mfa_enabled: bool,
     pub acct_verified: bool,
-    pub flags: i32,
+    pub flags: i64,
     pub nsfw_allowed: bool,
     pub purchased_flags: Option<i32>,
     pub premium_flags: Option<i32>,

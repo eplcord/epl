@@ -275,6 +275,7 @@ pub async fn login(
     Ok(Json(LoginRes { token }))
 }
 
+// TODO: Research more into what these mean
 #[derive(Deserialize)]
 pub struct LogoutReq {
     pub provider: Option<String>,
@@ -296,6 +297,9 @@ pub async fn verify_email(
     Extension(state): Extension<AppState>,
     Extension(session_context): Extension<SessionContext>,
 ) -> impl IntoResponse {
+    // Stub this and automatically verify the user
+    // TODO: Once we have SMTP, queue a verification email to be sent
+
     let mut updated_user: user::ActiveModel = session_context
         .user
         .into_active_model();
