@@ -1,4 +1,3 @@
-use std::future::Future;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{Extension, Json};
 use axum::http::StatusCode;
@@ -7,6 +6,7 @@ use chrono::Datelike;
 use rand::Rng;
 use rand::rngs::StdRng;
 use sea_orm::*;
+use sea_orm::ActiveValue::Set;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use epl_common::options::{EplOptions, Options};
@@ -292,7 +292,18 @@ pub async fn logout(
     }
 }
 
-pub async fn verify_email(Extension(state): Extension<AppState>) -> impl IntoResponse {
-    // Stub this and automatically verify the user
-    // TODO: Once we have SMTP, queue a verification email to be sent
+pub async fn verify_email(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+) -> impl IntoResponse {
+    let mut updated_user: user::ActiveModel = session_context
+        .user
+        .into_active_model();
+
+    updated_user.acct_verified = Set(true);
+
+    match updated_user.update(&state.conn).await {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+    }
 }

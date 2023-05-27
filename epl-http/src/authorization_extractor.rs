@@ -1,8 +1,7 @@
-use axum::headers::authorization::{Bearer, Credentials};
 use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
-use axum::{Extension, TypedHeader};
+use axum::Extension;
 use epl_common::database::auth::{get_session, get_user_from_session};
 use epl_common::database::entities::{session, user};
 use crate::AppState;
