@@ -3,12 +3,10 @@ use crate::gateway::schema::opcodes::{DispatchData, GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Consents, ConsentsEntry, ReadState, Ready, Tutorial, UserGuildSettings};
 use crate::gateway::schema::{GatewayMessage};
 use crate::state::SOCKET;
-use axum::extract::ws::{CloseFrame, Message};
-use epl_common::database::auth::get_session;
+use axum::extract::ws::Message;
 use epl_common::options::{EplOptions, Options};
 use crate::AppState;
 use crate::gateway::dispatch;
-use crate::gateway::schema::error_codes::ErrorCode;
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 
@@ -48,8 +46,7 @@ pub async fn dispatch_ready(user: epl_common::database::entities::user::Model, t
         banner: user.banner,
         avatar_decoration: user.avatar_decoration,
         avatar: user.avatar,
-        // FIXME: whoops we're not storing this
-        accent_color: None,
+        accent_color: user.accent_color,
     };
 
     // TODO: not super important but we stub this and suppress tutorial indicators to not be annoying

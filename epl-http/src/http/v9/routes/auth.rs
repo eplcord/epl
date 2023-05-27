@@ -271,3 +271,13 @@ pub async fn login(
 
     Ok(Json(LoginRes { token }))
 }
+
+#[derive(Deserialize)]
+pub struct LogoutReq {
+    pub provider: Option<String>,
+    pub voip_provider: Option<String>,
+}
+
+pub async fn logout(Extension(state): Extension<AppState>, _data: Json<LogoutReq>) -> impl IntoResponse {
+    StatusCode::OK
+}
