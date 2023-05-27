@@ -16,6 +16,7 @@ use epl_common::database::entities::{prelude::*, *};
 use crate::AppState;
 use epl_common::rustflake;
 use epl_common::database::auth::{create_user, generate_password_hash, generate_session, NewUserEnum};
+use epl_common::flags::UserFlags;
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
 
@@ -305,6 +306,7 @@ pub async fn verify_email(
         .into_active_model();
 
     updated_user.acct_verified = Set(true);
+    updated_user.flags = Set(updated_user.flags.unwrap() + UserFlags::VERIFIED_EMAIL as i64);
 
     match updated_user.update(&state.conn).await {
         Ok(_) => StatusCode::OK,
