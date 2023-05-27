@@ -97,6 +97,7 @@ pub struct Badge {
     description: String,
     icon: String,
     id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     link: Option<String>
 }
 
