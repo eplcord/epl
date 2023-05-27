@@ -37,7 +37,8 @@ pub struct User {
     flags: i64,
     global_name: Option<String>,
     id: String,
-    public_flags: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public_flags: Option<i64>,
     username: String,
 }
 
@@ -85,7 +86,7 @@ pub struct Stub {}
 
 pub async fn profile(
     Extension(state): Extension<AppState>,
-    Extension(_session_context): Extension<SessionContext>,
+    Extension(session_context): Extension<SessionContext>,
     Path(requested_user_id): Path<i64>
 ) -> impl IntoResponse {
     let requested_user_opt: Option<user::Model> =
@@ -129,11 +130,24 @@ pub async fn profile(
             banner_color: requested_user.banner_colour,
             bio: requested_user.bio.clone().unwrap_or(String::new()),
             discriminator: requested_user.discriminator,
-            flags: requested_user.flags,
+            flags: {
+                if session_context.user.id.eq(&requested_user_id) {
+
+                    requested_user.flags
+                } else {
+                    generate_public_flags(flags.clone())
+                }
+            },
             // FIXME: grab this when pomelo is impl
             global_name: None,
             id: requested_user.id.to_string(),
-            public_flags: generate_public_flags(flags),
+            public_flags: {
+                if session_context.user.id.eq(&requested_user_id) {
+                    Some(generate_public_flags(flags))
+                } else {
+                    None
+                }
+            },
             username: requested_user.username,
         },
         user_profile: UserProfile {
