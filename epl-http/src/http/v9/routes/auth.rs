@@ -1,3 +1,4 @@
+use std::future::Future;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{Extension, Json};
 use axum::http::StatusCode;
@@ -15,6 +16,7 @@ use epl_common::database::entities::{prelude::*, *};
 use crate::AppState;
 use epl_common::rustflake;
 use epl_common::database::auth::{create_user, generate_password_hash, generate_session, NewUserEnum};
+use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
 
 pub async fn location_metadata() -> &'static str {
@@ -163,6 +165,7 @@ pub async fn register(
         banner_colour: Default::default(),
         flags: Default::default(),
         premium_since: Default::default(),
+        accent_color: Default::default(),
     };
 
     let user =  create_user(&state.conn, new_user).await;
@@ -278,6 +281,18 @@ pub struct LogoutReq {
     pub voip_provider: Option<String>,
 }
 
-pub async fn logout(Extension(state): Extension<AppState>, _data: Json<LogoutReq>) -> impl IntoResponse {
-    StatusCode::OK
+pub async fn logout(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    _data: Json<LogoutReq>,
+) -> impl IntoResponse {
+    match session_context.session.delete(&state.conn).await {
+        Ok(_) => StatusCode::OK ,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+pub async fn verify_email(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    // Stub this and automatically verify the user
+    // TODO: Once we have SMTP, queue a verification email to be sent
 }

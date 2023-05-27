@@ -16,6 +16,7 @@ use epl_common::rustflake;
 use migration::{Migrator, MigratorTrait};
 
 mod http;
+mod authorization_extractor;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
