@@ -16,7 +16,7 @@ use epl_common::database::entities::{prelude::*, *};
 use crate::AppState;
 use epl_common::rustflake;
 use epl_common::database::auth::{create_user, generate_password_hash, generate_session, NewUserEnum};
-use epl_common::flags::UserFlags;
+use epl_common::flags::{get_user_flags, UserFlags};
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
 
@@ -300,6 +300,10 @@ pub async fn verify_email(
 ) -> impl IntoResponse {
     // Stub this and automatically verify the user
     // TODO: Once we have SMTP, queue a verification email to be sent
+
+    if get_user_flags(session_context.user.flags).contains(&UserFlags::VERIFIED_EMAIL) {
+        return StatusCode::BAD_REQUEST
+    }
 
     let mut updated_user: user::ActiveModel = session_context
         .user
