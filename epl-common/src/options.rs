@@ -8,7 +8,7 @@ pub struct EplOptions {
     pub mediaproxy_url: Option<String>,
     pub listen_addr: String,
     pub database_url: String,
-    pub redis_addr: String,
+    pub nats_addr: String,
     pub lvsp_secret: String,
     pub require_ssl: bool,
     pub registration: bool
@@ -25,7 +25,7 @@ impl Options for EplOptions {
             mediaproxy_url: env::var("MEDIAPROXY_URL").ok(),
             listen_addr: env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3926".to_string()),
             database_url: env::var("DATABASE_URL").expect("DATABASE_URL is required!"),
-            redis_addr: env::var("REDIS_ADDR").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+            nats_addr: env::var("NATS_ADDR").unwrap_or_else(|_| "127.0.0.1:4222".to_string()),
             lvsp_secret: env::var("LVSP_SECRET").expect("LVSP_SECRET is required!"),
             require_ssl: env::var("REQUIRE_SSL").unwrap_or_else(|_| "false".to_string()).parse().unwrap(),
             registration: env::var("REGISTRATION").unwrap_or_else(|_| "false".to_string()).parse().unwrap()

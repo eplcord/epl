@@ -39,6 +39,8 @@ async fn main() {
     info!("\tListen Address: {}", options.listen_addr);
     info!("\tRequire SSL: {}", options.require_ssl);
 
+    info!("\tNATS Address: {}", options.nats_addr);
+
     info!("Connecting to database");
 
     let mut migration_db_opt = migration::sea_orm::ConnectOptions::new(options.database_url.clone());
@@ -64,7 +66,7 @@ async fn main() {
     info!("Starting server");
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS, Method::DELETE])
         .allow_headers(Any);
 
     let app_state = AppState { conn };

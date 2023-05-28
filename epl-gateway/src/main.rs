@@ -38,6 +38,8 @@ async fn main() {
     info!("\tListen Address: {}", options.listen_addr);
     info!("\tRequire SSL: {}", options.require_ssl);
 
+    info!("\tNATS Address: {}", options.nats_addr);
+
     info!("Connecting to database");
 
     let mut migration_db_opt = migration::sea_orm::ConnectOptions::new(options.database_url.clone());
