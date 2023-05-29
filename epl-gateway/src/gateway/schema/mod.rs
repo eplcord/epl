@@ -12,7 +12,7 @@ pub(crate) mod ready;
 pub(crate) mod voice_state;
 
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct GatewayMessage {
     pub s: Option<i64>,
     pub t: Option<String>,

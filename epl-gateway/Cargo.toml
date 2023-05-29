@@ -21,7 +21,7 @@ tokio = { version = "^1.26", features = ["full"] }
 epl-common = { path = "../epl-common" }
 
 ## Web
-axum = { version = "^0.6", features = ["ws"] }
+axum = { version = "^0.6", features = ["ws", "query"] }
 tower-http = { version = "*", features = ["cors"] }
 
 ## Gateway

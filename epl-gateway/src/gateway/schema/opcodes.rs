@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use tracing::debug;
+use crate::gateway::dispatch::DispatchData;
 
 use crate::gateway::schema::hello::Hello;
 use crate::gateway::schema::identify::Identify;
 use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::presence::Presence;
 
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
 pub enum OpCodes {
     DISPATCH = 0,
@@ -19,7 +20,7 @@ pub enum OpCodes {
     HEARTBEAT_ACK = 11
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum GatewayData {
     DISPATCH {
@@ -30,13 +31,6 @@ pub enum GatewayData {
     IDENTIFY(Box<Identify>),
     PRESENCE_UPDATE(Box<Presence>),
     HELLO(Box<Hello>),
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum DispatchData {
-    READY(super::ready::Ready),
-    READY_SUPPLEMENTAL(super::ready::ReadySupplemental)
 }
 
 pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {

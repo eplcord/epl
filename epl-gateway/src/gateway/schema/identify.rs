@@ -1,7 +1,7 @@
 use crate::gateway::schema::presence::Presence;
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Identify {
     pub token: String,
     pub capabilities: Option<i32>,
@@ -11,7 +11,7 @@ pub struct Identify {
     pub client_state: Option<ClientState>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Properties {
     pub browser: Option<String>,
     pub browser_user_agent: Option<String>,
@@ -30,7 +30,7 @@ pub struct Properties {
     pub window_manager: Option<String>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ClientState {
     pub api_code_version: Option<i32>,
     pub guild_versions: Option<Stub>,
@@ -42,6 +42,6 @@ pub struct ClientState {
     pub guild_hashes: Option<Stub>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Stub {
 }

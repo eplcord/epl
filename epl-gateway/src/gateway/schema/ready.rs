@@ -1,6 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Ready {
     pub version: i32,
     pub users: Vec<Stub>,
@@ -30,14 +30,14 @@ pub struct Ready {
     pub analytics_token: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UserGuildSettings {
     pub version: i32,
     pub partial: bool,
     pub entries: Vec<Stub>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct User {
     pub verified: bool,
     pub username: String,
@@ -63,13 +63,13 @@ pub struct User {
     pub accent_color: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Tutorial {
     pub indicators_suppressed: bool,
     pub indicators_confirmed: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Session {
     pub status: String,
     pub session_id: String,
@@ -77,21 +77,21 @@ pub struct Session {
     pub activities: Vec<Stub>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SessionClientInfo {
     pub version: i32,
     pub os: String,
     pub client: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ReadState {
     pub version: i32,
     pub partial: bool,
     pub entries: Vec<ReadStateEntry>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ReadStateEntry {
     pub read_state_type: i32,
     pub last_acked_id: String,
@@ -99,17 +99,17 @@ pub struct ReadStateEntry {
     pub badge_count: i32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Consents {
     pub personalization: ConsentsEntry,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ConsentsEntry {
     pub consented: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ReadySupplemental {
     pub disclose: Vec<String>,
     pub guilds: Vec<Stub>,
@@ -118,11 +118,11 @@ pub struct ReadySupplemental {
     pub merged_presences: MergedPresences,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MergedPresences {
     pub friends: Vec<Stub>,
     pub guilds: Vec<Stub>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Stub {}
