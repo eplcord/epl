@@ -2,7 +2,7 @@ use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::Extension;
-use epl_common::database::auth::{get_session, get_user_from_session};
+use epl_common::database::auth::{get_session_by_token, get_user_from_session_by_token};
 use epl_common::database::entities::{session, user};
 use crate::AppState;
 
@@ -24,8 +24,8 @@ pub async fn get_session_context<B>(
         .to_str()
         .unwrap();
 
-    return if let Ok(session) = get_session(&state.conn, &String::from(auth)).await {
-        if let Ok(user) = get_user_from_session(&state.conn, &String::from(auth)).await {
+    return if let Ok(session) = get_session_by_token(&state.conn, &String::from(auth)).await {
+        if let Ok(user) = get_user_from_session_by_token(&state.conn, &String::from(auth)).await {
             let context = SessionContext {
                 user,
                 session,

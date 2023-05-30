@@ -15,7 +15,7 @@ use epl_common::database::entities::{prelude::*, *};
 
 use crate::AppState;
 use epl_common::rustflake;
-use epl_common::database::auth::{create_user, generate_password_hash, generate_session, NewUserEnum};
+use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, NewUserEnum};
 use epl_common::flags::{get_user_flags, UserFlags};
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
@@ -316,4 +316,44 @@ pub async fn verify_email(
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR
     }
+}
+
+#[derive(Serialize)]
+pub struct SessionsRes {
+    pub user_sessions: Vec<Session>
+}
+
+#[derive(Serialize)]
+pub struct Session {
+    id_hash: String,
+    approx_last_used_time: String,
+    client_info: ClientInfo,
+}
+
+#[derive(Serialize)]
+pub struct ClientInfo {
+    os: String,
+    platform: String,
+    location: String
+}
+
+pub async fn sessions(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+) -> impl IntoResponse {
+    let sessions: Vec<Session> = get_all_sessions(&state.conn, &session_context.user.id)
+        .await
+        .into_iter()
+        .map(|session| Session {
+            id_hash: session.session_id,
+            approx_last_used_time: session.last_used.to_string(),
+            client_info: ClientInfo {
+                os: session.os.unwrap_or(String::from("Unknown")),
+                platform: session.platform.unwrap_or(String::from("Unknown")),
+                location: session.location.unwrap_or(String::from("Unknown")),
+            },
+        })
+        .collect();
+
+    Json(SessionsRes { user_sessions: sessions })
 }

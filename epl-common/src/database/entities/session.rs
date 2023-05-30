@@ -5,11 +5,22 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "session")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false, column_type = "Text")]
-    pub token: String,
     pub user_id: i64,
     pub iat: DateTime,
     pub exp: DateTime,
+    #[sea_orm(primary_key, auto_increment = false, column_type = "Text")]
+    pub session_id: String,
+    #[sea_orm(column_type = "Text")]
+    pub token: String,
+    #[sea_orm(column_type = "Text")]
+    pub status: String,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub os: Option<String>,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub platform: Option<String>,
+    pub last_used: DateTime,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub location: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

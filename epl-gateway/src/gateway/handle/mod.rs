@@ -9,15 +9,16 @@ use crate::AppState;
 use crate::gateway::dispatch::{send_close, send_message};
 use crate::gateway::schema::error_codes::ErrorCode::DecodeError;
 use crate::gateway::schema::GatewayMessage;
+use crate::state::ThreadData;
 
-pub async fn handle_op(msg: String, state: &AppState){
+pub async fn handle_op(thread_data: &mut ThreadData, msg: String, state: &AppState){
     let op = get_opcode(msg.clone());
     if op.is_ok() {
         let op = op.unwrap();
 
         match op.0 {
             OpCodes::HEARTBEAT => {
-                send_message(GatewayMessage {
+                send_message(thread_data, GatewayMessage {
                     op: OpCodes::HEARTBEAT_ACK,
                     d: None,
                     s: None,
@@ -26,9 +27,9 @@ pub async fn handle_op(msg: String, state: &AppState){
             }
             OpCodes::IDENTIFY => {
                 if let GatewayData::IDENTIFY(data) = op.1 {
-                    handle_identify(*data, state).await;
+                    handle_identify(thread_data, *data, state).await;
                 } else {
-                    send_close(DecodeError).await;
+                    send_close(thread_data, DecodeError).await;
                 }
             }
             _ => {

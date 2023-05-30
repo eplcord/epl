@@ -6,7 +6,7 @@ mod hypesquad;
 use axum::{middleware, Router};
 use axum::routing::{delete, get, post};
 use crate::authorization_extractor::get_session_context;
-use crate::http::v9::routes::auth::{location_metadata, login, logout, register, verify_email};
+use crate::http::v9::routes::auth::{location_metadata, login, logout, register, sessions, verify_email};
 use crate::http::v9::routes::hypesquad::{join_hypesquad, leave_hypesquad};
 use crate::http::v9::routes::users::profile;
 
@@ -16,6 +16,8 @@ pub fn assemble_routes() -> Router {
 
         .route("/verify", post(verify_email))
         .route("/verify/resend", post(verify_email))
+
+        .route("/sessions", get(sessions))
 
         .route_layer(middleware::from_fn(get_session_context));
 

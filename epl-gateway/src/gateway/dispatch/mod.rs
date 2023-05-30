@@ -8,7 +8,7 @@ use crate::gateway::schema::error_codes::ErrorCode;
 use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
-use crate::state::{CompressionType, EncodingType, GATEWAY_STATE, SOCKET};
+use crate::state::{CompressionType, EncodingType, ThreadData};
 
 pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
@@ -47,12 +47,10 @@ pub fn assemble_dispatch(t: DispatchTypes, d: DispatchData) -> GatewayMessage {
     }
 }
 
-pub async fn send_message(message: GatewayMessage) {
-    let mut socket_lock = SOCKET.get().lock().await;
-    let mut gateway_state_lock = GATEWAY_STATE.get().lock().await;
+pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage) {
 
-    let socket = socket_lock.as_mut().unwrap();
-    let gateway_state = gateway_state_lock.as_mut().unwrap();
+    let socket = thread_data.socket.as_mut().unwrap();
+    let gateway_state = thread_data.gateway_state.as_mut().unwrap();
 
     let mut enforced_zlib = false;
 
@@ -119,14 +117,10 @@ pub async fn send_message(message: GatewayMessage) {
         )
         .await
         .expect("Failed to send message to client");
-
-    drop(socket_lock);
-    drop(gateway_state_lock);
 }
 
-pub async fn send_close(reason: ErrorCode) {
-    let mut socket_lock = SOCKET.get().lock().await;
-    let socket = socket_lock.as_mut().unwrap();
+pub async fn send_close(thread_data: &mut ThreadData, reason: ErrorCode) {
+    let socket = thread_data.socket.as_mut().unwrap();
 
     socket.send(Message::Close(
         Some(
@@ -137,6 +131,4 @@ pub async fn send_close(reason: ErrorCode) {
         )))
         .await
         .expect("Failed to close websocket!");
-
-    drop(socket_lock);
 }

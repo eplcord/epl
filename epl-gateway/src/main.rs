@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 use axum::http::Method;
 use axum::{Extension, Router};
 use axum::routing::get;
+use axum_client_ip::SecureClientIpSource;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, info, log};
@@ -74,7 +75,8 @@ async fn main() {
         .route("/", get(gateway))
 
         .layer(cors)
-        .layer(Extension(app_state));
+        .layer(Extension(app_state))
+        .layer(SecureClientIpSource::RightmostXForwardedFor.into_extension());
 
     let addr: SocketAddr = options.listen_addr
         .parse()

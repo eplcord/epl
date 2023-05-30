@@ -16,3 +16,4 @@
 # Miscellaneous
 Caddyfile
 certs/
+GeoLite2-City.mmdb

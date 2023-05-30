@@ -1,10 +1,13 @@
-use crate::gateway::schema::ready::{Consents, ConsentsEntry, ReadState, Ready, Tutorial, UserGuildSettings};
+use epl_common::database::auth::{get_all_sessions, get_session_by_token};
+use crate::gateway::schema::ready::{Consents, ConsentsEntry, ReadState, Ready, Session, SessionClientInfo, Tutorial, UserGuildSettings};
 use epl_common::options::{EplOptions, Options};
 use crate::AppState;
 use crate::gateway::dispatch;
-use crate::gateway::dispatch::{assemble_dispatch, DispatchData, DispatchTypes, send_message};
+use crate::gateway::dispatch::{assemble_dispatch, DispatchData, DispatchTypes, send_close, send_message};
+use crate::gateway::schema::error_codes::ErrorCode::UnknownError;
+use crate::state::ThreadData;
 
-pub async fn dispatch_ready(user: epl_common::database::entities::user::Model, token: &String, state: &AppState) {
+pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::database::entities::user::Model, token: &String, state: &AppState) {
     // TODO: Stub guild settings until we learn more about them
     let user_guild_settings = UserGuildSettings {
         version: 0,
@@ -47,26 +50,35 @@ pub async fn dispatch_ready(user: epl_common::database::entities::user::Model, t
         indicators_confirmed: vec![],
     };
 
-    // let current_session = match get_session(&state.conn, token).await {
-    //     Ok(session) => session,
-    //     Err(_) => {
-    //         socket
-    //             .as_mut()
-    //             .unwrap()
-    //             .inner
-    //             .send(Message::Close(Some(CloseFrame {
-    //                 code: ErrorCode::UnknownError.into(),
-    //                 reason: ErrorCode::UnknownError.into(),
-    //             })))
-    //             .await
-    //             .expect("Failed to close websocket!");
-    //
-    //         return;
-    //     }
-    // };
+    let current_session = match get_session_by_token(&state.conn, token).await {
+        Ok(session) => session,
+        Err(_) => {
+            send_close(thread_data, UnknownError).await;
+            return;
+        }
+    };
 
-    // TODO: Build this up eventually
-    let sessions = vec![];
+    let sessions: Vec<Session> = get_all_sessions(&state.conn, &user.id)
+        .await
+        .into_iter()
+        .map(| session | {
+            Session {
+                status: session.status,
+                session_id: session.session_id,
+                client_info: SessionClientInfo {
+                    version: 0,
+                    os: session.os.unwrap_or(String::new()),
+                    client: match session.platform.unwrap_or(String::new()).as_str() {
+                        "Discord Client" => String::from("desktop"),
+                        "Discord Android" => String::from("mobile"),
+                        "Discord iOS" => String::from("mobile"),
+                        _ => String::from("web")
+                    },
+                },
+                activities: vec![],
+            }
+        })
+        .collect();
 
     // TODO: Stub for now
     let read_state = ReadState {
@@ -80,7 +92,7 @@ pub async fn dispatch_ready(user: epl_common::database::entities::user::Model, t
         personalization: ConsentsEntry { consented: false },
     };
 
-    send_message(assemble_dispatch(
+    send_message(thread_data, assemble_dispatch(
         DispatchTypes::READY,
         DispatchData::READY(Box::from(Ready {
             version: 9,
@@ -92,7 +104,7 @@ pub async fn dispatch_ready(user: epl_common::database::entities::user::Model, t
             sessions,
             // TODO: Need more research about this
             session_type: String::from("normal"),
-            // FIXME: We should have a separate id for the session...
+            // FIXME: Get this from the gateway state
             session_id: String::from(""),
             resume_gateway_url: EplOptions::get().gateway_url,
             relationships: vec![],
@@ -108,12 +120,13 @@ pub async fn dispatch_ready(user: epl_common::database::entities::user::Model, t
             country_code: String::from("US"),
             consents,
             connected_accounts: vec![],
-            auth_session_id_hash: String::from(""),
+            // TODO: do we really need to hash these?
+            auth_session_id_hash: current_session.session_id,
             api_code_version: 1,
             // We don't do analytics
             analytics_token: String::from(""),
         }))
     )).await;
 
-    dispatch::ready_supplemental::dispatch_ready_supplemental().await;
+    dispatch::ready_supplemental::dispatch_ready_supplemental(thread_data).await;
 }

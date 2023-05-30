@@ -24,6 +24,8 @@ epl-common = { path = "../epl-common" }
 axum = { version = "^0.6", features = ["ws", "query"] }
 tower-http = { version = "*", features = ["cors"] }
 
+axum-client-ip = "0.4.1"
+
 ## Gateway
 state = { version = "^0.5", features = ["tls"] }
 

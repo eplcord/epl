@@ -13,7 +13,7 @@ use chrono::{Days, Utc};
 use sea_orm::{ActiveValue, DatabaseConnection};
 
 use zxcvbn::zxcvbn;
-use crate::gen_token;
+use crate::{gen_session_id, gen_token};
 
 use sea_orm::*;
 
@@ -42,12 +42,19 @@ pub async fn generate_session(conn: &DatabaseConnection, user: i64) -> Result<St
     let current_time = Utc::now().naive_utc();
     let expiry_time = current_time.checked_add_days(Days::new(30)).expect("Time has broken!");
     let token = gen_token();
+    let session_id = gen_session_id();
 
     let new_session = session::ActiveModel {
         token: ActiveValue::Set(token.clone()),
+        status: ActiveValue::Set(String::from("online")),
+        os: ActiveValue::Set(None),
+        platform: ActiveValue::Set(None),
+        last_used: ActiveValue::Set(current_time),
         user_id: ActiveValue::Set(user),
         iat: ActiveValue::Set(current_time),
-        exp: ActiveValue::Set(expiry_time)
+        exp: ActiveValue::Set(expiry_time),
+        session_id: ActiveValue::Set(session_id),
+        location: ActiveValue::Set(None),
     };
 
     Session::insert(new_session)
@@ -72,8 +79,8 @@ pub enum GetSessionEnum {
     BadUser,
 }
 
-pub async fn get_user_from_session(conn: &DatabaseConnection, token: &String) -> Result<user::Model, GetSessionError> {
-    let session: Option<session::Model> = Session::find_by_id(token).one(conn).await.expect("Failed to access db!");
+pub async fn get_user_from_session_by_token(conn: &DatabaseConnection, token: &String) -> Result<user::Model, GetSessionError> {
+    let session: Option<session::Model> = Session::find().filter(session::Column::Token.eq(token)).one(conn).await.expect("Failed to access db!");
 
     match session {
         None => Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() }),
@@ -88,13 +95,17 @@ pub async fn get_user_from_session(conn: &DatabaseConnection, token: &String) ->
     }
 }
 
-pub async fn get_session(conn: &DatabaseConnection, token: &String) -> Result<session::Model,GetSessionError> {
-    let session: Option<session::Model> = Session::find_by_id(token).one(conn).await.expect("Failed to access db!");
+pub async fn get_session_by_token(conn: &DatabaseConnection, token: &String) -> Result<session::Model,GetSessionError> {
+    let session: Option<session::Model> = Session::find().filter(session::Column::Token.eq(token)).one(conn).await.expect("Failed to access db!");
 
     match session {
         None => Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() }),
         Some(session) => Ok(session)
     }
+}
+
+pub async fn get_all_sessions(conn: &DatabaseConnection, id: &i64) -> Vec<session::Model> {
+    Session::find().filter(session::Column::UserId.eq(*id)).all(conn).await.expect("Failed to access db!")
 }
 
 #[derive(Debug, Clone)]

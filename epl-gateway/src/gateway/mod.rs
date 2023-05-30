@@ -1,5 +1,5 @@
 use std::fmt;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -24,7 +24,10 @@ use crate::gateway::handle::handle_op;
 use crate::gateway::schema::hello::Hello;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::GatewayMessage;
-use crate::state::{SOCKET, NATS, NATS_SUBSCRIPTIONS, GatewayState, GATEWAY_STATE, EncodingType, CompressionType};
+use crate::state::{GatewayState, EncodingType, CompressionType, ThreadData};
+
+use std::thread;
+use axum_client_ip::SecureClientIp;
 
 mod dispatch;
 mod handle;
@@ -54,7 +57,7 @@ pub struct Params {
 
 pub async fn gateway(
     ws: WebSocketUpgrade,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    SecureClientIp(addr): SecureClientIp,
     Extension(state): Extension<AppState>,
     Query(params): Query<Params>
 ) -> impl IntoResponse {
@@ -63,54 +66,40 @@ pub async fn gateway(
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state, params))
 }
 
-async fn handle_socket(mut rawsocket: WebSocket, addr: SocketAddr, state: AppState, params: Params) {
+async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, params: Params) {
     // save first message
     let mut msg_try = {
         let res = rawsocket.recv().await;
         res
     };
 
-    let rawsocket_wrapped = Arc::new(Mutex::new(Some(rawsocket)));
-    let rawsocket_c = rawsocket_wrapped.clone();
+    debug!("thread id: {:?}", thread::current().id());
 
-    if !SOCKET.set(move || rawsocket_c.clone()) {
-        debug!("socket was previously set!");
-        let inner = rawsocket_wrapped.lock().await.take();
-        SOCKET.get().lock().await.replace(inner.unwrap());
+    let mut thread_data = ThreadData {
+        session_ip: Some(addr),
+        socket: Some(rawsocket),
+        ..Default::default()
     };
 
     debug!("Connecting to NATS server for new session by {}", &addr);
-    let nats_wrapped = Arc::new(
-        Mutex::new(
+    let nats_wrapped =
             Some(
                 async_nats::connect(
                     EplOptions::get().nats_addr
                 ).await.expect("Failed to connect to the NATS server")
-            )
-        )
     );
-    let nats_c = nats_wrapped.clone();
 
-    if !NATS.set(move || nats_c.clone()) {
-        debug!("nats was previously set!");
-        let inner = nats_wrapped.lock().await.take();
-        NATS.get().lock().await.replace(inner.unwrap());
-    }
+    thread_data.nats = nats_wrapped;
 
     // Prepare subscriptions vec
-    let nats_subscriptions_wrapped = Arc::new(Mutex::new(Some(vec![])));
-    let nats_subscriptions_c = nats_subscriptions_wrapped.clone();
+    let nats_subscriptions_wrapped = Some(vec![]);
 
-    if !NATS_SUBSCRIPTIONS.set(move || nats_subscriptions_c.clone()) {
-        debug!("nats_subscriptions was previously set!");
-        let inner = nats_subscriptions_wrapped.lock().await.take();
-        NATS_SUBSCRIPTIONS.get().lock().await.replace(inner.unwrap());
-    }
+    thread_data.nats_subscriptions = nats_subscriptions_wrapped;
 
     debug!("Connected to NATS server");
 
     // Do initial unauthed gateway state
-    let gateway_state = Arc::new(Mutex::new(Some(GatewayState {
+    let gateway_state = Some(GatewayState {
         user_id: None,
         bot: None,
         large_threshold: None,
@@ -119,16 +108,12 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: SocketAddr, state: AppSta
         intents: None,
         compression: params.compress.map(|compression| compression.parse::<CompressionType>().expect("Invalid compression type requested!")),
         encoding: params.encoding.parse::<EncodingType>().expect("Invalid encoding type requested!"),
-    })));
-    let gateway_state_c = gateway_state.clone();
+    });
 
-    if !GATEWAY_STATE.set(move || gateway_state_c.clone()) {
-        let inner = gateway_state.lock().await.take();
-        GATEWAY_STATE.get().lock().await.replace(inner.unwrap());
-    }
+    thread_data.gateway_state = gateway_state;
 
     // Send HELLO to start gateway communication
-    send_message(GatewayMessage {
+    send_message(&mut thread_data, GatewayMessage {
         op: OpCodes::HELLO,
         d: Some(GatewayData::HELLO(Box::from(Hello {
             heartbeat_interval: 10000,
@@ -136,12 +121,6 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: SocketAddr, state: AppSta
         s: None,
         t: None,
     }).await;
-
-    let socket = SOCKET.get();
-
-    let nats = NATS.get();
-
-    let nats_subscriptions = NATS_SUBSCRIPTIONS.get();
 
     loop {
         // Clippy is being bad here >:(
@@ -151,7 +130,7 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: SocketAddr, state: AppSta
             if let Ok(msg) = msg {
                 match msg {
                     Text(msg) => {
-                        handle_op(msg, &state).await;
+                        handle_op(&mut thread_data, msg, &state).await;
                     }
                     Close(_msg) => {
                         info!("bye bye {addr}");
@@ -175,13 +154,11 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: SocketAddr, state: AppSta
         }
 
         // Ensure all NATS messages are sent and then build queue of subscriptions to process
-        let mut nats_lock = nats.lock().await;
-        let nats_operable = nats_lock.as_mut().unwrap();
+        let nats_operable = thread_data.nats.as_mut().unwrap();
 
         nats_operable.flush().await.expect("Failed to flush NATS message queue!");
 
-        let mut nats_subscriptions_lock = nats_subscriptions.lock().await;
-        let nats_subscriptions_operable = nats_subscriptions_lock.as_mut().unwrap();
+        let nats_subscriptions_operable = thread_data.nats_subscriptions.as_mut().unwrap();
 
         let mut nats_messages: Vec<async_nats::Message> = vec![];
 
@@ -193,19 +170,13 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: SocketAddr, state: AppSta
             }
         }
 
-        drop(nats_subscriptions_lock);
-        drop(nats_lock);
-
         for i in nats_messages {
             todo!()
         }
 
         // Capture next websocket message
         msg_try = {
-            let mut socket_lock = socket.lock().await;
-            let res = socket_lock.as_mut().unwrap().recv().await;
-            drop(socket_lock);
-            res
+            thread_data.socket.as_mut().unwrap().recv().await
         };
     }
 }
