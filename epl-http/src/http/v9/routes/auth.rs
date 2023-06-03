@@ -17,8 +17,10 @@ use crate::AppState;
 use epl_common::rustflake;
 use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id, NewUserEnum};
 use epl_common::flags::{get_user_flags, UserFlags};
+use epl_common::nats::Messages;
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
+use crate::nats::send_nats_message;
 
 pub async fn location_metadata() -> &'static str {
     ""
@@ -384,6 +386,11 @@ pub async fn logout_session(
         match session {
             Ok(session) => {
                 session.into_active_model().delete(&state.conn).await.expect("Failed to remove session from db!");
+
+                send_nats_message(&state.nats_client,
+                                  session_context.user.id.to_string(),
+                                  Messages::InvalidateGatewaySession { session: i.clone() }
+                ).await;
             }
             Err(_) => {
                 // TODO: see what discord returns for an invalid session id

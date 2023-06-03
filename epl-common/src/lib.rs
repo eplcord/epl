@@ -3,13 +3,13 @@ use maxminddb::geoip2::{City};
 use maxminddb::Reader;
 use once_cell::sync::Lazy;
 use rand::distributions::{Alphanumeric, DistString};
-use tracing::debug;
 use crate::options::{EplOptions, Options};
 
 pub mod options;
 pub mod rustflake;
 pub mod database;
 pub mod flags;
+pub mod nats;
 
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")

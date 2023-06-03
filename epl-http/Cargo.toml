@@ -50,6 +50,10 @@ serde_with = "2.3.1"
 
 chrono = "0.4.24"
 
+## NATS Wire Protocol
+async-nats = "0.29.0"
+rmp-serde = "1.1.1"
+
 ## Misc
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"

@@ -8,14 +8,16 @@ use crate::gateway::schema::identify::Identify;
 use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::presence::Presence;
 
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Default)]
 #[repr(u8)]
 pub enum OpCodes {
+    #[default]
     DISPATCH = 0,
     HEARTBEAT = 1,
     IDENTIFY = 2,
     PRESENCE_UPDATE = 3,
     VOICE_STATE_UPDATE = 4,
+    INVALID_SESSION = 9,
     HELLO = 10,
     HEARTBEAT_ACK = 11
 }

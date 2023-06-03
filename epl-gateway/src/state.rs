@@ -2,6 +2,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use async_nats::Subscriber;
 use axum::extract::ws::WebSocket;
+use epl_common::rustflake::Snowflake;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ParseCompressionTypeError;
@@ -47,8 +48,11 @@ pub enum EncodingType {
     Etf
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub struct GatewayState {
+    pub(crate) gateway_session_id: i64,
     pub(crate) user_id: Option<i64>,
+    pub(crate) session_id: Option<String>,
     pub(crate) bot: Option<bool>,
     pub(crate) large_threshold: Option<i8>,
     pub(crate) current_shard: Option<i8>,
@@ -58,20 +62,11 @@ pub struct GatewayState {
     pub(crate) encoding: EncodingType,
 }
 
-
-// pub static GATEWAY_STATE: LocalStorage<Arc<Mutex<Option<GatewayState>>>> = LocalStorage::new();
-//
-// pub static SOCKET: LocalStorage<Arc<Mutex<Option<WebSocket>>>> = LocalStorage::new();
-//
-// pub static NATS: LocalStorage<Arc<Mutex<Option<async_nats::Client>>>> = LocalStorage::new();
-//
-// pub static NATS_SUBSCRIPTIONS: LocalStorage<Arc<Mutex<Option<Vec<Subscriber>>>>> = LocalStorage::new();
-
-#[derive(Default)]
 pub struct ThreadData {
-    pub gateway_state: Option<GatewayState>,
-    pub socket: Option<WebSocket>,
-    pub nats: Option<async_nats::Client>,
-    pub nats_subscriptions: Option<Vec<Subscriber>>,
-    pub session_ip: Option<IpAddr>,
+    pub gateway_state: GatewayState,
+    pub socket: WebSocket,
+    pub nats: async_nats::Client,
+    pub nats_subscriptions: Vec<Subscriber>,
+    pub session_ip: IpAddr,
+    pub snowflake_factory: Snowflake
 }

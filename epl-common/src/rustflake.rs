@@ -2,36 +2,14 @@ use chrono::Utc;
 use std::sync::{Arc, Mutex};
 
 pub struct Snowflake {
-    epoch: i64,
-    worker_id: i64,
-    datacenter_id: i64,
-    sequence: i64,
-    time: Arc<Mutex<i64>>,
+    pub epoch: i64,
+    pub worker_id: i64,
+    pub datacenter_id: i64,
+    pub sequence: i64,
+    pub time: Arc<Mutex<i64>>,
 }
 
 impl Snowflake {
-    /// Default configuration for a Snowflake
-    pub fn default() -> Snowflake {
-        Snowflake {
-            epoch: 1420070400000,
-            worker_id: 1,
-            datacenter_id: 1,
-            sequence: 0,
-            time: Arc::new(Mutex::new(0)),
-        }
-    }
-
-    /// Creates a new Snowflake with the provided configuration
-    pub fn new(epoch: i64, worker_id: i64, datacenter_id: i64) -> Snowflake {
-        Snowflake {
-            epoch,
-            worker_id,
-            datacenter_id,
-            sequence: 0,
-            time: Arc::new(Mutex::new(0)),
-        }
-    }
-
     pub fn epoch(&mut self, epoch: i64) -> &mut Self {
         self.epoch = epoch;
         self
@@ -65,5 +43,17 @@ impl Snowflake {
 
     fn get_time(&self) -> i64 {
         Utc::now().timestamp_millis() - self.epoch
+    }
+}
+
+impl Default for Snowflake {
+    fn default() -> Snowflake {
+        Snowflake {
+            epoch: 1420070400000,
+            worker_id: 1,
+            datacenter_id: 1,
+            sequence: 0,
+            time: Arc::new(Mutex::new(0)),
+        }
     }
 }

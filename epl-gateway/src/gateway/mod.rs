@@ -9,7 +9,7 @@ use axum::{
     Extension,
 };
 use axum::extract::Query;
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt};
 use serde::{de, Deserialize, Deserializer};
 
 use crate::AppState;
@@ -24,10 +24,13 @@ use crate::gateway::schema::GatewayMessage;
 use crate::state::{GatewayState, EncodingType, CompressionType, ThreadData};
 
 use axum_client_ip::SecureClientIp;
+use epl_common::rustflake::Snowflake;
+use crate::gateway::nats::handle_nats_message;
 
 mod dispatch;
 mod handle;
 mod schema;
+mod nats;
 
 /// Serde deserialization decorator to map empty Strings to None,
 fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
@@ -65,36 +68,24 @@ pub async fn gateway(
 async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, params: Params) {
     // save first message
     let mut msg_try = {
-        let res = rawsocket.recv().await;
-        res
-    };
-
-    let mut thread_data = ThreadData {
-        session_ip: Some(addr),
-        socket: Some(rawsocket),
-        ..Default::default()
+        rawsocket.recv().now_or_never()
     };
 
     debug!("Connecting to NATS server for new session by {}", &addr);
-    let nats_wrapped =
-            Some(
-                async_nats::connect(
-                    EplOptions::get().nats_addr
-                ).await.expect("Failed to connect to the NATS server")
-    );
-
-    thread_data.nats = nats_wrapped;
+    let nats = async_nats::connect(EplOptions::get().nats_addr)
+        .await
+        .expect("Failed to connect to the NATS server");
 
     // Prepare subscriptions vec
-    let nats_subscriptions_wrapped = Some(vec![]);
-
-    thread_data.nats_subscriptions = nats_subscriptions_wrapped;
+    let nats_subscriptions = vec![];
 
     debug!("Connected to NATS server");
 
     // Do initial unauthed gateway state
-    let gateway_state = Some(GatewayState {
+    let gateway_state = GatewayState {
+        gateway_session_id: Snowflake::default().generate(),
         user_id: None,
+        session_id: None,
         bot: None,
         large_threshold: None,
         current_shard: None,
@@ -102,9 +93,18 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
         intents: None,
         compression: params.compress.map(|compression| compression.parse::<CompressionType>().expect("Invalid compression type requested!")),
         encoding: params.encoding.parse::<EncodingType>().expect("Invalid encoding type requested!"),
-    });
+    };
 
-    thread_data.gateway_state = gateway_state;
+    let mut thread_data = ThreadData {
+        gateway_state,
+        session_ip: addr,
+        socket: rawsocket,
+        nats,
+        snowflake_factory: Snowflake {
+            ..Default::default()
+        },
+        nats_subscriptions,
+    };
 
     // Send HELLO to start gateway communication
     send_message(&mut thread_data, GatewayMessage {
@@ -121,56 +121,65 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
         // We can't collapse two if lets here as that is still unstable
         #[allow(clippy::collapsible_match)]
         if let Some(msg) = msg_try {
-            if let Ok(msg) = msg {
-                match msg {
-                    Text(msg) => {
-                        handle_op(&mut thread_data, msg, &state).await;
+            if let Some(msg) = msg {
+                if let Ok(msg) = msg {
+                    match msg {
+                        Text(msg) => {
+                            handle_op(&mut thread_data, msg, &state).await;
+                        }
+                        Close(_msg) => {
+                            info!("bye bye {addr}");
+                            break;
+                        }
+                        Ping(_msg) => {
+                            debug!("Ping from {addr}")
+                        }
+                        Pong(_msg) => {
+                            debug!("Pong from {addr}")
+                        }
+                        _ => {
+                            debug!("Bad gateway message from {addr}!");
+                            break;
+                        }
                     }
-                    Close(_msg) => {
-                        info!("bye bye {addr}");
-                        break;
-                    }
-                    Ping(_msg) => {
-                        debug!("Ping from {addr}")
-                    }
-                    Pong(_msg) => {
-                        debug!("Pong from {addr}")
-                    }
-                    _ => {
-                        debug!("Bad gateway message from {addr}!");
-                        break;
-                    }
+                } else {
+                    info!("bye bye {addr} (closed due to error {msg:#?})");
+                    break;
                 }
-            } else {
-                info!("bye bye {addr} (closed due to error {msg:#?})");
-                break;
             }
         }
 
-        // Ensure all NATS messages are sent and then build queue of subscriptions to process
-        let nats_operable = thread_data.nats.as_mut().unwrap();
 
-        nats_operable.flush().await.expect("Failed to flush NATS message queue!");
-
-        let nats_subscriptions_operable = thread_data.nats_subscriptions.as_mut().unwrap();
+        // Ensure all NATS messages are sent
+        thread_data.nats.flush().await.expect("Failed to flush NATS message queue!");
 
         let mut nats_messages: Vec<async_nats::Message> = vec![];
 
-        for i in nats_subscriptions_operable {
-            if let Some(message) = i.next().await {
-                debug!("Received NATS message: {:?}", &message);
+        for i in thread_data.nats_subscriptions.iter_mut() {
+            // Clippy is being bad here >:( again :(
+            // We can't collapse two if lets here as that is still unstable
+            #[allow(clippy::collapsible_match)]
+            if let Some(message) = i.next().now_or_never() {
+                if let Some(message) = message {
+                    debug!("Received NATS message: {:?}", &message);
 
-                nats_messages.push(message);
+                    nats_messages.push(message);
+                }
             }
         }
 
         for i in nats_messages {
-            todo!()
+            if let Ok(msg) = serde_json::from_slice::<epl_common::nats::Messages>(&i.payload) {
+                handle_nats_message(&mut thread_data, msg, &state).await;
+            } else {
+                debug!("huhhh?");
+            }
+
         }
 
         // Capture next websocket message
         msg_try = {
-            thread_data.socket.as_mut().unwrap().recv().await
-        };
+            thread_data.socket.recv().now_or_never()
+        }
     }
 }

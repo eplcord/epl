@@ -1056,6 +1056,7 @@ dependencies = [
  "migration",
  "once_cell",
  "rand",
+ "rmp-serde",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -1084,6 +1085,7 @@ dependencies = [
  "jsonwebtoken",
  "migration",
  "rand",
+ "rmp-serde",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -1107,6 +1109,7 @@ dependencies = [
  "argon2",
  "askama",
  "askama_axum",
+ "async-nats",
  "axum",
  "blake3",
  "chrono",
@@ -1114,6 +1117,7 @@ dependencies = [
  "jsonwebtoken",
  "migration",
  "rand",
+ "rmp-serde",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -2433,6 +2437,28 @@ name = "rle-decode-fast"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3582f63211428f83597b51b2ddb88e2a91a9d52d12831f9d08f5e624e8977422"
+
+[[package]]
+name = "rmp"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44519172358fd6d58656c86ab8e7fbc9e1490c3e8f14d35ed78ca0dd07403c9f"
+dependencies = [
+ "byteorder",
+ "num-traits",
+ "paste",
+]
+
+[[package]]
+name = "rmp-serde"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5b13be192e0220b8afb7222aa5813cb62cc269ebb5cac346ca6487681d2913e"
+dependencies = [
+ "byteorder",
+ "rmp",
+ "serde",
+]
 
 [[package]]
 name = "rust_decimal"

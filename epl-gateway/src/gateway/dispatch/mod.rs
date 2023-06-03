@@ -48,10 +48,6 @@ pub fn assemble_dispatch(t: DispatchTypes, d: DispatchData) -> GatewayMessage {
 }
 
 pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage) {
-
-    let socket = thread_data.socket.as_mut().unwrap();
-    let gateway_state = thread_data.gateway_state.as_mut().unwrap();
-
     let mut enforced_zlib = false;
 
     // Large messages always have to be compressed
@@ -61,16 +57,16 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
 
     let mut binary = false;
 
-    if gateway_state.compression.is_some() || gateway_state.encoding == EncodingType::Etf || enforced_zlib {
+    if thread_data.gateway_state.compression.is_some() || thread_data.gateway_state.encoding == EncodingType::Etf || enforced_zlib {
         binary = true;
     }
 
-    socket
+    thread_data.socket
         .send(
             match binary {
                 true => {
                     Message::Binary({
-                        let encoded_message = match gateway_state.encoding {
+                        let encoded_message = match thread_data.gateway_state.encoding {
                             EncodingType::Json => {
                                 let message = serde_json::to_string(&message.clone())
                                     .expect("Failed to encode message as JSON");
@@ -87,7 +83,7 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
                             let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
                             e.write_all(&encoded_message).expect("Failed to compress message!");
                             e.finish().expect("Failed to compress message!")
-                        } else if let Some(compression_type) = &gateway_state.compression {
+                        } else if let Some(compression_type) = &thread_data.gateway_state.compression {
                             match compression_type {
                                 CompressionType::Zlib => {
                                     let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
@@ -120,9 +116,7 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
 }
 
 pub async fn send_close(thread_data: &mut ThreadData, reason: ErrorCode) {
-    let socket = thread_data.socket.as_mut().unwrap();
-
-    socket.send(Message::Close(
+    thread_data.socket.send(Message::Close(
         Some(
             CloseFrame {
                 code: reason.into(),

@@ -8,6 +8,7 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, info, log};
 use askama::Template;
+use async_nats::Client;
 
 use epl_common::options::{EplOptions, Options};
 use crate::http::api;
@@ -17,6 +18,7 @@ use migration::{Migrator, MigratorTrait};
 
 mod http;
 mod authorization_extractor;
+mod nats;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -63,13 +65,19 @@ async fn main() {
 
     info!("Connected to database");
 
+    info!("Connecting to NATS server");
+
+    let client = async_nats::connect(EplOptions::get().nats_addr).await.expect("Failed to connect to NATS server");
+
+    info!("Connected to NATS server");
+
     info!("Starting server");
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS, Method::DELETE])
         .allow_headers(Any);
 
-    let app_state = AppState { conn };
+    let app_state = AppState { conn, nats_client: client };
 
     let app = Router::new()
         .nest("/api", api())
@@ -92,6 +100,7 @@ async fn main() {
 #[derive(Clone)]
 pub struct AppState {
     conn: DatabaseConnection,
+    nats_client: Client
 }
 
 #[derive(Template)]
