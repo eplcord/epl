@@ -1,10 +1,7 @@
 use std::fmt;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use std::str::FromStr;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
-use axum::extract::connect_info::ConnectInfo;
 use axum::{
     extract::ws::Message::{Close, Ping, Pong, Text},
     extract::ws::{WebSocket, WebSocketUpgrade},
@@ -26,7 +23,6 @@ use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::GatewayMessage;
 use crate::state::{GatewayState, EncodingType, CompressionType, ThreadData};
 
-use std::thread;
 use axum_client_ip::SecureClientIp;
 
 mod dispatch;
@@ -72,8 +68,6 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
         let res = rawsocket.recv().await;
         res
     };
-
-    debug!("thread id: {:?}", thread::current().id());
 
     let mut thread_data = ThreadData {
         session_ip: Some(addr),

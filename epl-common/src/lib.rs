@@ -3,6 +3,7 @@ use maxminddb::geoip2::{City};
 use maxminddb::Reader;
 use once_cell::sync::Lazy;
 use rand::distributions::{Alphanumeric, DistString};
+use tracing::debug;
 use crate::options::{EplOptions, Options};
 
 pub mod options;
@@ -30,8 +31,8 @@ pub fn get_location_from_ip(ip: IpAddr) -> String {
     let result: City = GEOIP.lookup(ip).expect("Failed to look up IP");
 
     format!("{}, {} ({})",
-            result.city.unwrap().names.unwrap().first_entry().unwrap().get(),
-            result.country.unwrap().names.unwrap().first_entry().unwrap().get(),
+            result.city.unwrap().names.unwrap().get("en").unwrap(),
+            result.country.unwrap().names.unwrap().get("en").unwrap(),
             ip
     )
 }

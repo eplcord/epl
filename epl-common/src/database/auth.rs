@@ -104,6 +104,15 @@ pub async fn get_session_by_token(conn: &DatabaseConnection, token: &String) -> 
     }
 }
 
+pub async fn get_session_by_id(conn: &DatabaseConnection, id: &String) -> Result<session::Model,GetSessionError> {
+    let session: Option<session::Model> = Session::find_by_id(id).one(conn).await.expect("Failed to access db!");
+
+    match session {
+        None => Err(GetSessionError { kind: GetSessionEnum::BadUser, message: "Session not found!".to_string() }),
+        Some(session) => Ok(session)
+    }
+}
+
 pub async fn get_all_sessions(conn: &DatabaseConnection, id: &i64) -> Vec<session::Model> {
     Session::find().filter(session::Column::UserId.eq(*id)).all(conn).await.expect("Failed to access db!")
 }

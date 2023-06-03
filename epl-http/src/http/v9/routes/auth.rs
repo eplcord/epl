@@ -15,7 +15,8 @@ use epl_common::database::entities::{prelude::*, *};
 
 use crate::AppState;
 use epl_common::rustflake;
-use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, NewUserEnum};
+use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id, get_session_by_token, GetSessionError, NewUserEnum};
+use epl_common::database::entities::session::Model;
 use epl_common::flags::{get_user_flags, UserFlags};
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
@@ -356,4 +357,41 @@ pub async fn sessions(
         .collect();
 
     Json(SessionsRes { user_sessions: sessions })
+}
+
+#[derive(Deserialize)]
+pub struct LogoutSessionReq {
+    password: String,
+    session_id_hashes: Vec<String>
+}
+
+pub async fn logout_session(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    data: Json<LogoutSessionReq>,
+) -> impl IntoResponse {
+    // Verify password
+    let password_hash = PasswordHash::new(&session_context.user.password_hash).expect("Failed to parse password hash!");
+
+    if Argon2::default().verify_password(data.password.as_bytes(), &password_hash).is_err() {
+        return (StatusCode::from(APIErrorCode::PasswordDoesNotMatch),
+                throw_http_error(APIErrorCode::PasswordDoesNotMatch, vec![]
+                ).await).into_response();
+    }
+
+    for i in &data.session_id_hashes {
+        let session = get_session_by_id(&state.conn, i).await;
+
+        match session {
+            Ok(session) => {
+                session.into_active_model().delete(&state.conn).await.expect("Failed to remove session from db!");
+            }
+            Err(_) => {
+                // TODO: see what discord returns for an invalid session id
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    }
+
+    (StatusCode::OK).into_response()
 }

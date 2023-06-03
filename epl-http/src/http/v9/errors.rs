@@ -69,6 +69,7 @@ pub struct APIErrorMessage {
 pub enum APIErrorCode {
     UnknownAccount,
     Unauthorized,
+    PasswordDoesNotMatch,
     InvalidFormBody,
 }
 
@@ -77,6 +78,7 @@ impl From<APIErrorCode> for u16 {
         match code {
             APIErrorCode::UnknownAccount => 10001,
             APIErrorCode::Unauthorized => 40001,
+            APIErrorCode::PasswordDoesNotMatch => 50018,
             APIErrorCode::InvalidFormBody => 50035,
         }
     }
@@ -87,6 +89,7 @@ impl From<APIErrorCode> for String {
         match code {
             APIErrorCode::UnknownAccount => "Unknown Account".to_string(),
             APIErrorCode::Unauthorized => "Unauthorized".to_string(),
+            APIErrorCode::PasswordDoesNotMatch => "Password does not match".to_string(),
             APIErrorCode::InvalidFormBody => "Unknown Form Body".to_string(),
         }
     }
@@ -97,6 +100,7 @@ impl From<APIErrorCode> for StatusCode {
         match code {
             APIErrorCode::UnknownAccount => StatusCode::BAD_REQUEST,
             APIErrorCode::Unauthorized => StatusCode::UNAUTHORIZED,
+            APIErrorCode::PasswordDoesNotMatch => StatusCode::BAD_REQUEST,
             APIErrorCode::InvalidFormBody => StatusCode::BAD_REQUEST,
         }
     }
