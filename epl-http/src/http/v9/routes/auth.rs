@@ -15,8 +15,7 @@ use epl_common::database::entities::{prelude::*, *};
 
 use crate::AppState;
 use epl_common::rustflake;
-use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id, get_session_by_token, GetSessionError, NewUserEnum};
-use epl_common::database::entities::session::Model;
+use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id, NewUserEnum};
 use epl_common::flags::{get_user_flags, UserFlags};
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
@@ -302,7 +301,7 @@ pub async fn verify_email(
     // Stub this and automatically verify the user
     // TODO: Once we have SMTP, queue a verification email to be sent
 
-    if get_user_flags(session_context.user.flags).contains(&UserFlags::VERIFIED_EMAIL) {
+    if get_user_flags(session_context.user.flags).contains(&UserFlags::VerifiedEmail) {
         return StatusCode::BAD_REQUEST
     }
 
@@ -311,7 +310,7 @@ pub async fn verify_email(
         .into_active_model();
 
     updated_user.acct_verified = Set(true);
-    updated_user.flags = Set(updated_user.flags.unwrap() + UserFlags::VERIFIED_EMAIL as i64);
+    updated_user.flags = Set(updated_user.flags.unwrap() + UserFlags::VerifiedEmail as i64);
 
     match updated_user.update(&state.conn).await {
         Ok(_) => StatusCode::OK,

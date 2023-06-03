@@ -28,14 +28,14 @@ pub async fn join_hypesquad(
 
     for i in get_user_flags(session_context.user.flags) {
         match i {
-            UserFlags::HYPESQUAD_ONLINE_HOUSE_1 => {
-                final_flags -= UserFlags::HYPESQUAD_ONLINE_HOUSE_1 as i64;
+            UserFlags::HypesquadOnlineHouse1 => {
+                final_flags -= UserFlags::HypesquadOnlineHouse1 as i64;
             },
-            UserFlags::HYPESQUAD_ONLINE_HOUSE_2 => {
-                final_flags -= UserFlags::HYPESQUAD_ONLINE_HOUSE_2 as i64;
+            UserFlags::HypesquadOnlineHouse2 => {
+                final_flags -= UserFlags::HypesquadOnlineHouse2 as i64;
             },
-            UserFlags::HYPESQUAD_ONLINE_HOUSE_3 => {
-                final_flags -= UserFlags::HYPESQUAD_ONLINE_HOUSE_3 as i64;
+            UserFlags::HypesquadOnlineHouse3 => {
+                final_flags -= UserFlags::HypesquadOnlineHouse3 as i64;
             },
             _ => {}
         }
@@ -43,13 +43,13 @@ pub async fn join_hypesquad(
 
     match data.house_id {
         1 => {
-            final_flags += UserFlags::HYPESQUAD_ONLINE_HOUSE_1 as i64;
+            final_flags += UserFlags::HypesquadOnlineHouse1 as i64;
         },
         2 => {
-            final_flags += UserFlags::HYPESQUAD_ONLINE_HOUSE_2 as i64;
+            final_flags += UserFlags::HypesquadOnlineHouse2 as i64;
         },
         3 => {
-            final_flags += UserFlags::HYPESQUAD_ONLINE_HOUSE_3 as i64;
+            final_flags += UserFlags::HypesquadOnlineHouse3 as i64;
         },
         _ => return StatusCode::BAD_REQUEST
     }
@@ -74,14 +74,14 @@ pub async fn leave_hypesquad(
 
     for i in get_user_flags(session_context.user.flags) {
         match i {
-            UserFlags::HYPESQUAD_ONLINE_HOUSE_1 => {
-                final_flags -= UserFlags::HYPESQUAD_ONLINE_HOUSE_1 as i64;
+            UserFlags::HypesquadOnlineHouse1 => {
+                final_flags -= UserFlags::HypesquadOnlineHouse1 as i64;
             },
-            UserFlags::HYPESQUAD_ONLINE_HOUSE_2 => {
-                final_flags -= UserFlags::HYPESQUAD_ONLINE_HOUSE_2 as i64;
+            UserFlags::HypesquadOnlineHouse2 => {
+                final_flags -= UserFlags::HypesquadOnlineHouse2 as i64;
             },
-            UserFlags::HYPESQUAD_ONLINE_HOUSE_3 => {
-                final_flags -= UserFlags::HYPESQUAD_ONLINE_HOUSE_3 as i64;
+            UserFlags::HypesquadOnlineHouse3 => {
+                final_flags -= UserFlags::HypesquadOnlineHouse3 as i64;
             },
             _ => {}
         }
