@@ -2,5 +2,6 @@
 
 pub mod prelude;
 
+pub mod relationship;
 pub mod session;
 pub mod user;

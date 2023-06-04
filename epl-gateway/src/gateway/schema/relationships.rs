@@ -18,7 +18,7 @@ pub struct RelationshipAdd {
     pub should_notify: bool,
     pub since: String,
     #[serde(rename = "type")]
-    pub _type: i8,
+    pub _type: i32,
     pub user: User
 }
 
@@ -28,5 +28,5 @@ pub struct RelationshipRemove {
     pub nickname: Option<String>,
     pub since: String,
     #[serde(rename = "type")]
-    pub _type: i8,
+    pub _type: i32,
 }

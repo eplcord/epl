@@ -1,5 +1,6 @@
 use async_nats::Client;
 use epl_common::nats::Messages;
+use epl_common::RelationshipType::{Blocked, Friend, Incoming, Outgoing};
 use crate::AppState;
 
 pub async fn send_nats_message(nats_client: &Client, subject: String, message: Messages) {
@@ -13,46 +14,70 @@ pub async fn send_nats_message(nats_client: &Client, subject: String, message: M
 
 pub enum RelationshipUpdate {
     Create,
+    Accept,
+    Block,
     Remove
 }
 
-pub async fn send_relationship_update(state: &AppState, a: i64, b: i64, instruction: RelationshipUpdate) {
+pub async fn send_relationship_update(state: &AppState, creator: i64, peer: i64, instruction: RelationshipUpdate) {
     match instruction {
         RelationshipUpdate::Create => {
-            // To
             send_nats_message(
-                &state.nats_client, a.to_string(),
+                &state.nats_client, creator.to_string(),
                 Messages::RelationshipAdd {
-                    originator: b,
-                    req_type: 3
+                    user_id: peer,
+                    req_type: Incoming
                 }
             ).await;
 
-            // From
             send_nats_message(
-                &state.nats_client, b.to_string(),
+                &state.nats_client, peer.to_string(),
                 Messages::RelationshipAdd {
-                    originator: a,
-                    req_type: 4
+                    user_id: creator,
+                    req_type: Outgoing
                 }
             ).await;
         }
         RelationshipUpdate::Remove => {
-            // To
             send_nats_message(
-                &state.nats_client, a.to_string(),
+                &state.nats_client, creator.to_string(),
                 Messages::RelationshipRemove {
-                    originator: b,
-                    req_type: 3
+                    user_id: peer,
+                    req_type: Outgoing
                 }
             ).await;
 
-            // From
             send_nats_message(
-                &state.nats_client, b.to_string(),
+                &state.nats_client, peer.to_string(),
                 Messages::RelationshipRemove {
-                    originator: a,
-                    req_type: 4
+                    user_id: creator,
+                    req_type: Incoming
+                }
+            ).await;
+        }
+        RelationshipUpdate::Block => {
+            send_nats_message(
+                &state.nats_client, creator.to_string(),
+                Messages::RelationshipAdd {
+                    user_id: peer,
+                    req_type: Blocked
+                }
+            ).await;
+        }
+        RelationshipUpdate::Accept => {
+            send_nats_message(
+                &state.nats_client, creator.to_string(),
+                Messages::RelationshipAdd {
+                    user_id: peer,
+                    req_type: Friend
+                }
+            ).await;
+
+            send_nats_message(
+                &state.nats_client, peer.to_string(),
+                Messages::RelationshipAdd {
+                    user_id: creator,
+                    req_type: Friend
                 }
             ).await;
         }

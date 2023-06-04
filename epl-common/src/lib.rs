@@ -3,6 +3,7 @@ use maxminddb::geoip2::{City};
 use maxminddb::Reader;
 use once_cell::sync::Lazy;
 use rand::distributions::{Alphanumeric, DistString};
+use serde_derive::{Deserialize, Serialize};
 use crate::options::{EplOptions, Options};
 
 pub mod options;
@@ -35,4 +36,23 @@ pub fn get_location_from_ip(ip: IpAddr) -> String {
             result.country.unwrap().names.unwrap().get("en").unwrap(),
             ip
     )
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum RelationshipType {
+    Friend,
+    Blocked,
+    Incoming,
+    Outgoing
+}
+
+impl From<RelationshipType> for i32 {
+    fn from(code: RelationshipType) -> i32 {
+        match code {
+            RelationshipType::Friend => 1,
+            RelationshipType::Blocked => 2,
+            RelationshipType::Incoming => 3,
+            RelationshipType::Outgoing => 4
+        }
+    }
 }

@@ -1,11 +1,17 @@
+use sea_orm::EntityTrait;
 use epl_common::database::auth::{get_all_sessions, get_session_by_token};
-use crate::gateway::schema::ready::{Consents, ConsentsEntry, ReadState, Ready, Session, SessionClientInfo, Tutorial, UserGuildSettings};
+use epl_common::database::entities::prelude::{Relationship, User};
+use epl_common::database::entities::{relationship, user};
+use crate::gateway::schema::ready::{Consents, ConsentsEntry, OtherUser, ReadState, Ready, RelationshipReady, Session, SessionClientInfo, Tutorial, UserGuildSettings};
 use epl_common::options::{EplOptions, Options};
 use crate::AppState;
 use crate::gateway::dispatch;
 use crate::gateway::dispatch::{assemble_dispatch, DispatchData, DispatchTypes, send_close, send_message};
 use crate::gateway::schema::error_codes::ErrorCode::UnknownError;
 use crate::state::ThreadData;
+
+use sea_orm::prelude::*;
+use epl_common::flags::{generate_public_flags, get_user_flags};
 
 pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::database::entities::user::Model, token: &String, state: &AppState) {
     // TODO: Stub guild settings until we learn more about them
@@ -14,6 +20,11 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
         partial: false,
         entries: vec![],
     };
+
+    let mut relationships: Vec<RelationshipReady> = vec![];
+    let mut other_users: Vec<OtherUser> = vec![];
+
+    let mut queued_users: Vec<i64> = vec![];
 
     let user_struct = crate::gateway::schema::ready::User {
         verified: user.acct_verified,
@@ -92,11 +103,69 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
         personalization: ConsentsEntry { consented: false },
     };
 
+    let created_relationships = Relationship::find()
+        .filter(relationship::Column::Creator.eq(user.id))
+        .all(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let peered_relationships = Relationship::find()
+        .filter(relationship::Column::Peer.eq(user.id))
+        .all(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    // Gather created relationships first
+    for i in created_relationships {
+        relationships.push(RelationshipReady {
+            user_id: i.peer.to_string(),
+            _type: i.relationship_type,
+            since: i.timestamp.to_string(),
+            nickname: None,
+            id: i.peer.to_string(),
+        });
+
+        queued_users.push(i.peer);
+    }
+
+    // Then peered relationships
+    for i in peered_relationships {
+        relationships.push(RelationshipReady {
+            user_id: i.creator.to_string(),
+            _type: i.relationship_type,
+            since: i.timestamp.to_string(),
+            nickname: None,
+            id: i.creator.to_string(),
+        });
+
+        queued_users.push(i.creator);
+    }
+
+    for i in queued_users {
+        let user: user::Model = User::find_by_id(i)
+            .one(&state.conn)
+            .await
+            .expect("Failed to access database!")
+            .expect("Missing user while queued!");
+
+        other_users.push(OtherUser {
+            username: user.username,
+            public_flags: generate_public_flags(get_user_flags(user.flags)),
+            id: user.id.to_string(),
+            global_name: None,
+            display_name: None,
+            discriminator: Some(user.discriminator),
+            bot: user.bot,
+            avatar_decoration: user.avatar_decoration,
+            avatar: user.avatar,
+        })
+    }
+
     send_message(thread_data, assemble_dispatch(
         DispatchTypes::Ready,
         DispatchData::Ready(Box::from(Ready {
             version: 9,
-            users: vec![],
+            users: other_users,
             user_settings_proto: String::new(),
             user_guild_settings,
             user: user_struct,
@@ -107,7 +176,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
             // FIXME: Get this from the gateway state
             session_id: String::from(""),
             resume_gateway_url: EplOptions::get().gateway_url,
-            relationships: vec![],
+            relationships,
             read_state,
             private_channels: vec![],
             merged_members: vec![],

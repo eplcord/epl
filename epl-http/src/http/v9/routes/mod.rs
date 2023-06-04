@@ -4,12 +4,12 @@ mod users;
 mod hypesquad;
 
 use axum::{middleware, Router};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 use crate::authorization_extractor::get_session_context;
 use crate::http::v9::routes::auth::{location_metadata, login, logout, logout_session, register, sessions, verify_email};
 use crate::http::v9::routes::hypesquad::{join_hypesquad, leave_hypesquad};
 use crate::http::v9::routes::users::profile;
-use crate::http::v9::routes::users::relationships::{delete_relationship, new_relationship};
+use crate::http::v9::routes::users::relationships::{delete_relationship, get_all_relationships, modify_relationship, new_relationship};
 
 pub fn assemble_routes() -> Router {
     let sessions = Router::new()
@@ -36,9 +36,11 @@ pub fn assemble_routes() -> Router {
         .merge(authenticated_auth);
 
     let atme = Router::new()
+        .route("/relationships", get(get_all_relationships))
         .route("/relationships", post(new_relationship))
 
-        .route("/relationships/:id", delete(delete_relationship));
+        .route("/relationships/:id", delete(delete_relationship))
+        .route("/relationships/:id", put(modify_relationship));
 
     let users = Router::new()
         .nest("/@me", atme)

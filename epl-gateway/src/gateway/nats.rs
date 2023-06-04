@@ -16,11 +16,11 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         Messages::Error { .. } => {
             todo!();
         }
-        Messages::RelationshipAdd { originator, req_type } => {
-            dispatch_relationship_add(thread_data, state, originator, req_type).await;
+        Messages::RelationshipAdd { user_id, req_type } => {
+            dispatch_relationship_add(thread_data, state, user_id, req_type).await;
         }
-        Messages::RelationshipRemove { originator, req_type } => {
-            dispatch_relationship_remove(thread_data, state, originator, req_type).await;
+        Messages::RelationshipRemove { user_id, req_type } => {
+            dispatch_relationship_remove(thread_data, state, user_id, req_type).await;
         }
     }
 }

@@ -1,4 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
+use crate::RelationshipType;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "t", content = "c")]
@@ -15,19 +16,19 @@ pub enum Messages {
         /// Human readable error message
         message: Option<String>,
     },
-    /// A friend request was sent to a user
+    /// A friend request was sent to a user (sent to peer)
     RelationshipAdd {
-        /// User who made the friend request
-        originator: i64,
-        /// Unknown usage in Discord client
-        req_type: i8
+        /// Creator of the request
+        user_id: i64,
+        /// Relationship type
+        req_type: RelationshipType
     },
-    /// A friend request was ignored or a friend was removed
+    /// A friend request was ignored or a friend was removed (sent to peer)
     RelationshipRemove {
-        /// The other user involved
-        originator: i64,
-        /// Unknown usage in Discord client
-        req_type: i8
+        /// Creator of the request
+        user_id: i64,
+        /// Relationship type
+        req_type: RelationshipType
     }
 }
 

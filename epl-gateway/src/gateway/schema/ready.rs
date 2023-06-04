@@ -3,7 +3,7 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Ready {
     pub version: i32,
-    pub users: Vec<Stub>,
+    pub users: Vec<OtherUser>,
     pub user_settings_proto: String,
     pub user_guild_settings: UserGuildSettings,
     pub user: User,
@@ -12,7 +12,7 @@ pub struct Ready {
     pub session_type: String,
     pub session_id: String,
     pub resume_gateway_url: String,
-    pub relationships: Vec<Stub>,
+    pub relationships: Vec<RelationshipReady>,
     pub read_state: ReadState,
     pub private_channels: Vec<Stub>,
     pub merged_members: Vec<Stub>,
@@ -122,6 +122,29 @@ pub struct ReadySupplemental {
 pub struct MergedPresences {
     pub friends: Vec<Stub>,
     pub guilds: Vec<Stub>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RelationshipReady {
+    pub user_id: String,
+    #[serde(rename = "type")]
+    pub _type: i32,
+    pub since: String,
+    pub nickname: Option<String>,
+    pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct OtherUser {
+    pub username: String,
+    pub public_flags: i64,
+    pub id: String,
+    pub global_name: Option<String>,
+    pub display_name: Option<String>,
+    pub discriminator: Option<String>,
+    pub bot: bool,
+    pub avatar_decoration: Option<String>,
+    pub avatar: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

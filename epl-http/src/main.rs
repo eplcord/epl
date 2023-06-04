@@ -74,7 +74,7 @@ async fn main() {
     info!("Starting server");
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS, Method::DELETE])
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS, Method::DELETE, Method::PUT])
         .allow_headers(Any);
 
     let app_state = AppState { conn, nats_client: client };
