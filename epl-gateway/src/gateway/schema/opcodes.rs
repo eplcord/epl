@@ -12,27 +12,27 @@ use crate::gateway::schema::presence::Presence;
 #[repr(u8)]
 pub enum OpCodes {
     #[default]
-    DISPATCH = 0,
-    HEARTBEAT = 1,
-    IDENTIFY = 2,
-    PRESENCE_UPDATE = 3,
-    VOICE_STATE_UPDATE = 4,
-    INVALID_SESSION = 9,
-    HELLO = 10,
-    HEARTBEAT_ACK = 11
+    Dispatch = 0,
+    Heartbeat = 1,
+    Identify = 2,
+    PresenceUpdate = 3,
+    VoiceStateUpdate = 4,
+    InvalidSession = 9,
+    Hello = 10,
+    HeartbeatAck = 11
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum GatewayData {
-    DISPATCH {
+    Dispatch {
         #[serde(flatten)]
         data: Box<DispatchData>,
     },
-    HEARTBEAT(i32),
-    IDENTIFY(Box<Identify>),
-    PRESENCE_UPDATE(Box<Presence>),
-    HELLO(Box<Hello>),
+    Heartbeat(i32),
+    Identify(Box<Identify>),
+    PresenceUpdate(Box<Presence>),
+    Hello(Box<Hello>),
 }
 
 pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {

@@ -17,16 +17,16 @@ pub async fn handle_op(thread_data: &mut ThreadData, msg: String, state: &AppSta
         let op = op.unwrap();
 
         match op.0 {
-            OpCodes::HEARTBEAT => {
+            OpCodes::Heartbeat => {
                 send_message(thread_data, GatewayMessage {
-                    op: OpCodes::HEARTBEAT_ACK,
+                    op: OpCodes::HeartbeatAck,
                     d: None,
                     s: None,
                     t: None,
                 }).await;
             }
-            OpCodes::IDENTIFY => {
-                if let GatewayData::IDENTIFY(data) = op.1 {
+            OpCodes::Identify => {
+                if let GatewayData::Identify(data) = op.1 {
                     handle_identify(thread_data, *data, state).await;
                 } else {
                     send_close(thread_data, DecodeError).await;

@@ -10,6 +10,7 @@ pub(crate) mod opcodes;
 pub(crate) mod presence;
 pub(crate) mod ready;
 pub(crate) mod voice_state;
+pub(crate) mod relationships;
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Clone, Default)]

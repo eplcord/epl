@@ -15,10 +15,25 @@ pub enum Messages {
         /// Human readable error message
         message: Option<String>,
     },
+    /// A friend request was sent to a user
+    RelationshipAdd {
+        /// User who made the friend request
+        originator: i64,
+        /// Unknown usage in Discord client
+        req_type: i8
+    },
+    /// A friend request was ignored or a friend was removed
+    RelationshipRemove {
+        /// The other user involved
+        originator: i64,
+        /// Unknown usage in Discord client
+        req_type: i8
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Errors {
+    /// The message that was sent was invalid
     InvalidMessage,
 }
 

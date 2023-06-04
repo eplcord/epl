@@ -1,3 +1,5 @@
+pub mod relationships;
+
 use axum::{Extension, Json};
 use axum::extract::Path;
 use axum::http::StatusCode;

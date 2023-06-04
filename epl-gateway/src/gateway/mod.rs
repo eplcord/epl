@@ -108,8 +108,8 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
 
     // Send HELLO to start gateway communication
     send_message(&mut thread_data, GatewayMessage {
-        op: OpCodes::HELLO,
-        d: Some(GatewayData::HELLO(Box::from(Hello {
+        op: OpCodes::Hello,
+        d: Some(GatewayData::Hello(Box::from(Hello {
             heartbeat_interval: 10000,
         }))),
         s: None,

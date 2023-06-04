@@ -93,8 +93,8 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
     };
 
     send_message(thread_data, assemble_dispatch(
-        DispatchTypes::READY,
-        DispatchData::READY(Box::from(Ready {
+        DispatchTypes::Ready,
+        DispatchData::Ready(Box::from(Ready {
             version: 9,
             users: vec![],
             user_settings_proto: String::new(),

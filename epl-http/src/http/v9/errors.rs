@@ -17,7 +17,7 @@ pub async fn throw_http_error(
     }
 
     Json(APIError {
-        code: u16::from(error),
+        code: u32::from(error),
         message: String::from(error),
         errors: error_messages_vec,
     })
@@ -26,7 +26,7 @@ pub async fn throw_http_error(
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct APIError {
-    code: u16,
+    code: u32,
     message: String,
     #[serde_as(as = "HashMap<DisplayFromStr, _>")]
     errors: Vec<(String, APIErrorField)>,
@@ -71,15 +71,17 @@ pub enum APIErrorCode {
     Unauthorized,
     PasswordDoesNotMatch,
     InvalidFormBody,
+    CannotSendFriendRequestToSelf
 }
 
-impl From<APIErrorCode> for u16 {
-    fn from(code: APIErrorCode) -> u16 {
+impl From<APIErrorCode> for u32 {
+    fn from(code: APIErrorCode) -> u32 {
         match code {
             APIErrorCode::UnknownAccount => 10001,
             APIErrorCode::Unauthorized => 40001,
             APIErrorCode::PasswordDoesNotMatch => 50018,
             APIErrorCode::InvalidFormBody => 50035,
+            APIErrorCode::CannotSendFriendRequestToSelf => 80003
         }
     }
 }
@@ -91,6 +93,7 @@ impl From<APIErrorCode> for String {
             APIErrorCode::Unauthorized => "Unauthorized".to_string(),
             APIErrorCode::PasswordDoesNotMatch => "Password does not match".to_string(),
             APIErrorCode::InvalidFormBody => "Unknown Form Body".to_string(),
+            APIErrorCode::CannotSendFriendRequestToSelf => "Cannot send friend request to self".to_string()
         }
     }
 }
@@ -102,12 +105,13 @@ impl From<APIErrorCode> for StatusCode {
             APIErrorCode::Unauthorized => StatusCode::UNAUTHORIZED,
             APIErrorCode::PasswordDoesNotMatch => StatusCode::BAD_REQUEST,
             APIErrorCode::InvalidFormBody => StatusCode::BAD_REQUEST,
+            APIErrorCode::CannotSendFriendRequestToSelf => StatusCode::BAD_REQUEST
         }
     }
 }
 
-impl<'t> From<&'t APIErrorCode> for u16 {
-    fn from(code: &'t APIErrorCode) -> u16 {
+impl<'t> From<&'t APIErrorCode> for u32 {
+    fn from(code: &'t APIErrorCode) -> u32 {
         (*code).into()
     }
 }

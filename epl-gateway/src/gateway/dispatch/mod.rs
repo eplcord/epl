@@ -8,22 +8,28 @@ use crate::gateway::schema::error_codes::ErrorCode;
 use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
+use crate::gateway::schema::relationships::{RelationshipAdd, RelationshipRemove};
 use crate::state::{CompressionType, EncodingType, ThreadData};
 
 pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
+pub(crate) mod relationships;
 
 #[derive(Deserialize, Serialize)]
 pub enum DispatchTypes {
-    READY,
-    READY_SUPPLEMENTAL
+    Ready,
+    ReadySupplemental,
+    RelationshipAdd,
+    RelationshipRemove
 }
 
 impl From<DispatchTypes> for String {
     fn from(t: DispatchTypes) -> String {
         match t {
-            DispatchTypes::READY => String::from("READY"),
-            DispatchTypes::READY_SUPPLEMENTAL => String::from("READY_SUPPLEMENTAL")
+            DispatchTypes::Ready => String::from("READY"),
+            DispatchTypes::ReadySupplemental => String::from("READY_SUPPLEMENTAL"),
+            DispatchTypes::RelationshipAdd => String::from("RELATIONSHIP_ADD"),
+            DispatchTypes::RelationshipRemove => String::from("RELATIONSHIP_REMOVE")
         }
     }
 }
@@ -32,16 +38,18 @@ impl From<DispatchTypes> for String {
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum DispatchData {
-    READY(Box<Ready>),
-    READY_SUPPLEMENTAL(ReadySupplemental)
+    Ready(Box<Ready>),
+    ReadySupplemental(ReadySupplemental),
+    RelationshipAdd(RelationshipAdd),
+    RelationshipRemove(RelationshipRemove)
 }
 
 pub fn assemble_dispatch(t: DispatchTypes, d: DispatchData) -> GatewayMessage {
     GatewayMessage {
-        op: OpCodes::DISPATCH,
+        op: OpCodes::Dispatch,
         t: Some(String::from(t)),
         s: Some(0),
-        d: Some(GatewayData::DISPATCH {
+        d: Some(GatewayData::Dispatch {
             data: Box::new(d)
         }),
     }
