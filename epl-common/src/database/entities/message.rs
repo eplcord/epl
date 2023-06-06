@@ -3,29 +3,47 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "relationship")]
+#[sea_orm(table_name = "message")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub creator: i64,
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub peer: i64,
-    pub relationship_type: i32,
+    pub id: i64,
+    pub channel_id: i64,
+    pub author: Option<i64>,
+    pub content: String,
     pub timestamp: DateTime,
+    pub edited_timestamp: Option<DateTime>,
+    pub tts: bool,
+    pub mention_everyone: bool,
+    pub nonce: Option<String>,
+    pub pinned: bool,
+    pub webhook_id: Option<i64>,
+    pub r#type: i32,
+    pub application_id: Option<i64>,
+    pub message_reference: Option<i64>,
+    pub flags: Option<i32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::channel::Entity",
-        from = "Column::Peer",
+        from = "Column::ChannelId",
         to = "super::channel::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
     )]
     Channel,
     #[sea_orm(
+        belongs_to = "Entity",
+        from = "Column::MessageReference",
+        to = "Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    SelfRef,
+    #[sea_orm(
         belongs_to = "super::user::Entity",
-        from = "Column::Creator",
+        from = "Column::Author",
         to = "super::user::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"

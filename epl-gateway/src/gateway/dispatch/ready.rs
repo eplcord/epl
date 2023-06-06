@@ -1,16 +1,18 @@
-use sea_orm::EntityTrait;
+use std::collections::HashSet;
+use sea_orm::{Condition, EntityTrait};
 use epl_common::database::auth::{get_all_sessions, get_session_by_token};
-use epl_common::database::entities::prelude::{Relationship, User};
-use epl_common::database::entities::{relationship, user};
-use crate::gateway::schema::ready::{Consents, ConsentsEntry, OtherUser, ReadState, Ready, RelationshipReady, Session, SessionClientInfo, Tutorial, UserGuildSettings};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Relationship, User};
+use epl_common::database::entities::{channel, channel_member, relationship, user};
+use crate::gateway::schema::ready::{Consents, ConsentsEntry, OtherUser, PrivateChannel, ReadState, Ready, RelationshipReady, Session, SessionClientInfo, Tutorial, UserGuildSettings};
 use epl_common::options::{EplOptions, Options};
 use crate::AppState;
 use crate::gateway::dispatch;
-use crate::gateway::dispatch::{assemble_dispatch, DispatchData, DispatchTypes, send_close, send_message};
+use crate::gateway::dispatch::{assemble_dispatch, DispatchTypes, send_close, send_message};
 use crate::gateway::schema::error_codes::ErrorCode::UnknownError;
 use crate::state::ThreadData;
 
 use sea_orm::prelude::*;
+use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 
 pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::database::entities::user::Model, token: &String, state: &AppState) {
@@ -24,7 +26,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
     let mut relationships: Vec<RelationshipReady> = vec![];
     let mut other_users: Vec<OtherUser> = vec![];
 
-    let mut queued_users: Vec<i64> = vec![];
+    let mut queued_users: HashSet<i64> = HashSet::new();
 
     let user_struct = crate::gateway::schema::ready::User {
         verified: user.acct_verified,
@@ -125,7 +127,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
             id: i.peer.to_string(),
         });
 
-        queued_users.push(i.peer);
+        queued_users.insert(i.peer);
     }
 
     // Then peered relationships
@@ -138,7 +140,53 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
             id: i.creator.to_string(),
         });
 
-        queued_users.push(i.creator);
+        queued_users.insert(i.creator);
+    }
+
+    // Grab all DMs and Group DMs for user
+    let channels_in: Vec<channel_member::Model> = ChannelMember::find()
+        .filter(channel_member::Column::User.eq(user.id))
+        .all(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let mut private_channels: Vec<PrivateChannel> = vec![];
+
+    for i in channels_in {
+        let channel: channel::Model = Channel::find_by_id(i.channel)
+            .filter(
+                Condition::any()
+                    .add(channel::Column::Type.eq(ChannelTypes::DM as i32))
+                    .add(channel::Column::Type.eq(ChannelTypes::GroupDM as i32))
+            )
+            .one(&state.conn)
+            .await
+            .expect("Failed to access database!")
+            .expect("Channel user is member of is missing!");
+
+        let recipient_ids: Vec<String> = ChannelMember::find()
+            .filter(channel_member::Column::Channel.eq(channel.id))
+            .filter(channel_member::Column::User.ne(user.id))
+            .all(&state.conn)
+            .await
+            .expect("Failed to access database!")
+            .into_iter()
+            .map(|e| {
+                queued_users.insert(e.user);
+
+                e.user.to_string()
+            })
+            .collect();
+
+        private_channels.push(PrivateChannel {
+            _type: channel.r#type,
+            recipient_ids,
+            last_message_id: channel.last_message_id.map(|e| e.to_string()),
+            is_spam: None,
+            id: channel.id.to_string(),
+            flags: channel.flags.unwrap_or(9),
+            owner_id: channel.owner_id.map(|e| e.to_string()),
+        })
     }
 
     for i in queued_users {
@@ -162,8 +210,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
     }
 
     send_message(thread_data, assemble_dispatch(
-        DispatchTypes::Ready,
-        DispatchData::Ready(Box::from(Ready {
+        DispatchTypes::Ready(Box::from(Ready {
             version: 9,
             users: other_users,
             user_settings_proto: String::new(),
@@ -178,7 +225,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
             resume_gateway_url: EplOptions::get().gateway_url,
             relationships,
             read_state,
-            private_channels: vec![],
+            private_channels,
             merged_members: vec![],
             guilds: vec![],
             guild_join_requests: vec![],

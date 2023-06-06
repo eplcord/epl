@@ -1,5 +1,6 @@
 use epl_common::nats::Messages;
 use crate::AppState;
+use crate::gateway::dispatch::channel::dispatch_channel_create;
 use crate::gateway::dispatch::relationships::{dispatch_relationship_add, dispatch_relationship_remove};
 use crate::gateway::dispatch::send_message;
 use crate::gateway::schema::GatewayMessage;
@@ -21,6 +22,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::RelationshipRemove { user_id, req_type } => {
             dispatch_relationship_remove(thread_data, state, user_id, req_type).await;
+        }
+        Messages::ChannelCreate { id } => {
+            dispatch_channel_create(thread_data, state, id).await;
         }
     }
 }

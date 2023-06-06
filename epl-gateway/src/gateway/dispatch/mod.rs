@@ -4,6 +4,7 @@ use axum::extract::ws::{CloseFrame, Message};
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use serde::{Deserialize, Serialize};
+use crate::gateway::schema::channels::ChannelCreate;
 use crate::gateway::schema::error_codes::ErrorCode;
 use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
@@ -14,43 +15,37 @@ use crate::state::{CompressionType, EncodingType, ThreadData};
 pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
+pub(crate) mod channel;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
+#[serde(untagged)]
 pub enum DispatchTypes {
-    Ready,
-    ReadySupplemental,
-    RelationshipAdd,
-    RelationshipRemove
+    Ready(Box<Ready>),
+    ReadySupplemental(ReadySupplemental),
+    RelationshipAdd(RelationshipAdd),
+    RelationshipRemove(RelationshipRemove),
+    ChannelCreate(ChannelCreate),
 }
 
 impl From<DispatchTypes> for String {
     fn from(t: DispatchTypes) -> String {
         match t {
-            DispatchTypes::Ready => String::from("READY"),
-            DispatchTypes::ReadySupplemental => String::from("READY_SUPPLEMENTAL"),
-            DispatchTypes::RelationshipAdd => String::from("RELATIONSHIP_ADD"),
-            DispatchTypes::RelationshipRemove => String::from("RELATIONSHIP_REMOVE")
+            DispatchTypes::Ready(_) => String::from("READY"),
+            DispatchTypes::ReadySupplemental(_) => String::from("READY_SUPPLEMENTAL"),
+            DispatchTypes::RelationshipAdd(_) => String::from("RELATIONSHIP_ADD"),
+            DispatchTypes::RelationshipRemove(_) => String::from("RELATIONSHIP_REMOVE"),
+            DispatchTypes::ChannelCreate(_) => String::from("CHANNEL_CREATE"),
         }
     }
 }
 
-
-#[derive(Deserialize, Serialize, Clone)]
-#[serde(untagged)]
-pub enum DispatchData {
-    Ready(Box<Ready>),
-    ReadySupplemental(ReadySupplemental),
-    RelationshipAdd(RelationshipAdd),
-    RelationshipRemove(RelationshipRemove)
-}
-
-pub fn assemble_dispatch(t: DispatchTypes, d: DispatchData) -> GatewayMessage {
+pub fn assemble_dispatch(t: DispatchTypes) -> GatewayMessage {
     GatewayMessage {
         op: OpCodes::Dispatch,
-        t: Some(String::from(t)),
+        t: Some(String::from(t.clone())),
         s: Some(0),
         d: Some(GatewayData::Dispatch {
-            data: Box::new(d)
+            data: Box::new(t)
         }),
     }
 }

@@ -29,6 +29,11 @@ pub enum Messages {
         user_id: i64,
         /// Relationship type
         req_type: RelationshipType
+    },
+    /// A channel has been created
+    ChannelCreate {
+        /// ID of the channel created
+        id: i64
     }
 }
 

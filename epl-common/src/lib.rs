@@ -11,6 +11,7 @@ pub mod rustflake;
 pub mod database;
 pub mod flags;
 pub mod nats;
+pub mod channels;
 
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")
@@ -38,21 +39,14 @@ pub fn get_location_from_ip(ip: IpAddr) -> String {
     )
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum RelationshipType {
-    Friend,
-    Blocked,
-    Incoming,
-    Outgoing
-}
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Stub {}
 
-impl From<RelationshipType> for i32 {
-    fn from(code: RelationshipType) -> i32 {
-        match code {
-            RelationshipType::Friend => 1,
-            RelationshipType::Blocked => 2,
-            RelationshipType::Incoming => 3,
-            RelationshipType::Outgoing => 4
-        }
-    }
+#[derive(Serialize, Deserialize, Debug)]
+#[repr(i32)]
+pub enum RelationshipType {
+    Friend = 1,
+    Blocked = 2,
+    Incoming = 3,
+    Outgoing = 4,
 }

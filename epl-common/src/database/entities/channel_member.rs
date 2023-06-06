@@ -3,21 +3,19 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "relationship")]
+#[sea_orm(table_name = "channel_member")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub creator: i64,
+    pub channel: i64,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub peer: i64,
-    pub relationship_type: i32,
-    pub timestamp: DateTime,
+    pub user: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::channel::Entity",
-        from = "Column::Peer",
+        from = "Column::Channel",
         to = "super::channel::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
@@ -25,7 +23,7 @@ pub enum Relation {
     Channel,
     #[sea_orm(
         belongs_to = "super::user::Entity",
-        from = "Column::Creator",
+        from = "Column::User",
         to = "super::user::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"

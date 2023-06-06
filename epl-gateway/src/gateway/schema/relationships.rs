@@ -1,15 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct User {
-    pub avatar: Option<String>,
-    pub avatar_decoration: Option<String>,
-    pub discriminator: Option<String>,
-    pub global_name: Option<String>,
-    pub id: String,
-    pub public_flags: i64,
-    pub username: String
-}
+use crate::gateway::schema::SharedUser;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RelationshipAdd {
@@ -19,7 +9,7 @@ pub struct RelationshipAdd {
     pub since: String,
     #[serde(rename = "type")]
     pub _type: i32,
-    pub user: User
+    pub user: SharedUser
 }
 
 #[derive(Serialize, Deserialize, Clone)]

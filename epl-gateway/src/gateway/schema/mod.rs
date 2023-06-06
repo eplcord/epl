@@ -11,6 +11,7 @@ pub(crate) mod presence;
 pub(crate) mod ready;
 pub(crate) mod voice_state;
 pub(crate) mod relationships;
+pub(crate) mod channels;
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Clone, Default)]
@@ -19,4 +20,15 @@ pub struct GatewayMessage {
     pub t: Option<String>,
     pub op: OpCodes,
     pub d: Option<GatewayData>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SharedUser {
+    pub avatar: Option<String>,
+    pub avatar_decoration: Option<String>,
+    pub discriminator: Option<String>,
+    pub global_name: Option<String>,
+    pub id: String,
+    pub public_flags: i64,
+    pub username: String
 }

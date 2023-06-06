@@ -50,7 +50,7 @@ pub enum UserFlags {
     HypesquadOnlineHouse3 = 1 << 8,
     /// Early Nitro Supporter
     PremiumEarlySupporter = 1 << 9,
-    /// User is a Team (https://discord.com/developers/docs/topics/teams)
+    /// User is a Team <https://discord.com/developers/docs/topics/teams>
     TeamPseudoUser = 1 << 10,
     /// ? Best Guess: Related to Partner/Verification Applications
     InternalApplication = 1 << 11,
@@ -74,7 +74,7 @@ pub enum UserFlags {
     Spammer = 1 << 20,
     /// Disable Nitro Features for User
     DisablePremium = 1 << 21,
-    /// Active Developer (https://support-dev.discord.com/hc/en-us/articles/10113997751447)
+    /// Active Developer <https://support-dev.discord.com/hc/en-us/articles/10113997751447>
     ActiveDeveloper = 1 << 22,
     /// User has High Rate limits
     HighGlobalRateLimit = 1 << 33,

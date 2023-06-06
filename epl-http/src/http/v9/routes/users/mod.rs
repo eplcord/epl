@@ -1,13 +1,15 @@
 pub mod relationships;
+pub mod channels;
 
 use axum::{Extension, Json};
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use sea_orm::EntityTrait;
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 use epl_common::database::entities::user;
 use epl_common::flags::{Badge, generate_public_flags, get_user_flags};
+use epl_common::Stub;
 use crate::AppState;
 use crate::authorization_extractor::SessionContext;
 
@@ -18,6 +20,10 @@ pub struct ProfileRes {
     // TODO: what is this?
     guild_badges: Vec<Stub>,
     legacy_username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mutual_friends_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mutual_guilds: Option<Vec<Stub>>,
     premium_guild_since: Option<String>,
     premium_since: Option<String>,
     premium_type: i32,
@@ -83,13 +89,17 @@ pub enum ConnectedAccountMetadata {
     }
 }
 
-#[derive(Serialize)]
-pub struct Stub {}
+#[derive(Deserialize)]
+pub struct ProfileQuery {
+    with_mutual_guilds: bool,
+    with_mutual_friends_count: bool
+}
 
 pub async fn profile(
     Extension(state): Extension<AppState>,
     Extension(session_context): Extension<SessionContext>,
-    Path(requested_user_id): Path<i64>
+    Path(requested_user_id): Path<i64>,
+    profile_query: Query<ProfileQuery>
 ) -> impl IntoResponse {
     let requested_user_opt: Option<user::Model> =
         epl_common::database::entities::prelude::User::find_by_id(requested_user_id)
@@ -120,6 +130,16 @@ pub async fn profile(
         connected_accounts: vec![],
         guild_badges: vec![],
         legacy_username: None,
+        mutual_friends_count: if profile_query.with_mutual_friends_count {
+            Some(0)
+        } else {
+            None
+        },
+        mutual_guilds: if profile_query.with_mutual_guilds {
+            Some(vec![])
+        } else {
+            None
+        },
         premium_guild_since: None,
         premium_since: None,
         premium_type: requested_user.premium_type.unwrap_or(0),

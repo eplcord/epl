@@ -59,6 +59,13 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // Truncate database because token will now be null
+        let db = manager.get_connection();
+
+        db.execute_unprepared(
+            "TRUNCATE session;"
+        ).await?;
+
         manager
             .alter_table(
                 Table::alter()

@@ -1,5 +1,6 @@
 use crate::gateway::schema::presence::Presence;
 use serde_derive::{Serialize, Deserialize};
+use epl_common::Stub;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Identify {
@@ -40,8 +41,4 @@ pub struct ClientState {
     pub user_guild_settings_version: Option<i32>,
     pub user_settings_version: Option<i32>,
     pub guild_hashes: Option<Stub>
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Stub {
 }

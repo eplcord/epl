@@ -1,12 +1,11 @@
-use crate::gateway::dispatch::{assemble_dispatch, DispatchData, DispatchTypes, send_message};
+use crate::gateway::dispatch::{assemble_dispatch, DispatchTypes, send_message};
 use crate::gateway::schema::ready::{MergedPresences, ReadySupplemental};
 use crate::state::ThreadData;
 
 pub async fn dispatch_ready_supplemental(thread_data: &mut ThreadData) {
     // TODO: This is all stubbed
     send_message(thread_data, assemble_dispatch(
-        DispatchTypes::ReadySupplemental,
-        DispatchData::ReadySupplemental(ReadySupplemental {
+        DispatchTypes::ReadySupplemental(ReadySupplemental {
             disclose: vec![],
             guilds: vec![],
             lazy_private_channels: vec![],

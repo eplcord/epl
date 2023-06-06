@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use tracing::debug;
-use crate::gateway::dispatch::DispatchData;
+use crate::gateway::dispatch::DispatchTypes;
 
 use crate::gateway::schema::hello::Hello;
 use crate::gateway::schema::identify::Identify;
@@ -27,7 +27,7 @@ pub enum OpCodes {
 pub enum GatewayData {
     Dispatch {
         #[serde(flatten)]
-        data: Box<DispatchData>,
+        data: Box<DispatchTypes>,
     },
     Heartbeat(i32),
     Identify(Box<Identify>),

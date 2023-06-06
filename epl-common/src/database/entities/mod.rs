@@ -2,6 +2,9 @@
 
 pub mod prelude;
 
+pub mod channel;
+pub mod channel_member;
+pub mod message;
 pub mod relationship;
 pub mod session;
 pub mod user;

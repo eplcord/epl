@@ -1,4 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
+use epl_common::Stub;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Ready {
@@ -14,7 +15,7 @@ pub struct Ready {
     pub resume_gateway_url: String,
     pub relationships: Vec<RelationshipReady>,
     pub read_state: ReadState,
-    pub private_channels: Vec<Stub>,
+    pub private_channels: Vec<PrivateChannel>,
     pub merged_members: Vec<Stub>,
     pub guilds: Vec<Stub>,
     pub guild_join_requests: Vec<Stub>,
@@ -147,5 +148,17 @@ pub struct OtherUser {
     pub avatar: Option<String>,
 }
 
+/// These are just DMs/Group DMs
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Stub {}
+pub struct PrivateChannel {
+    #[serde(rename = "type")]
+    pub _type: i32,
+    pub recipient_ids: Vec<String>,
+    pub last_message_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_spam: Option<bool>,
+    pub id: String,
+    pub flags: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner_id: Option<String>
+}
