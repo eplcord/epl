@@ -14,6 +14,7 @@ use crate::state::ThreadData;
 use sea_orm::prelude::*;
 use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
+use epl_common::RelationshipType;
 
 pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::database::entities::user::Model, token: &String, state: &AppState) {
     // TODO: Stub guild settings until we learn more about them
@@ -113,6 +114,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
 
     let peered_relationships = Relationship::find()
         .filter(relationship::Column::Peer.eq(user.id))
+        .filter(relationship::Column::RelationshipType.ne(RelationshipType::Blocked as i32))
         .all(&state.conn)
         .await
         .expect("Failed to access database!");
@@ -132,9 +134,16 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
 
     // Then peered relationships
     for i in peered_relationships {
+        // For peered relationships, they will show as outgoing when the peer should see it as incoming
+        let normalized_type = if i.relationship_type == (RelationshipType::Outgoing as i32) {
+            RelationshipType::Incoming as i32
+        } else {
+            i.relationship_type
+        };
+
         relationships.push(RelationshipReady {
             user_id: i.creator.to_string(),
-            _type: i.relationship_type,
+            _type: normalized_type,
             since: i.timestamp.to_string(),
             nickname: None,
             id: i.creator.to_string(),

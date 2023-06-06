@@ -51,6 +51,7 @@ pub async fn get_all_relationships(
 
     let peered_relationships = Relationship::find()
         .filter(relationship::Column::Peer.eq(session_context.user.id))
+        .filter(relationship::Column::RelationshipType.ne(RelationshipType::Blocked as i32))
         .all(&state.conn)
         .await
         .expect("Failed to access database!");
@@ -88,11 +89,18 @@ pub async fn get_all_relationships(
             .expect("Failed to access database!")
             .expect("Missing user in relationship!");
 
+        // For peered relationships, they will show as outgoing when the peer should see it as incoming
+        let normalized_type = if i.relationship_type == (RelationshipType::Outgoing as i32) {
+            RelationshipType::Incoming as i32
+        } else {
+            i.relationship_type
+        };
+
         output.push(RelationshipRes {
             id: user.id.to_string(),
             nickname: None,
             since: i.timestamp.to_string(),
-            _type: i.relationship_type,
+            _type: normalized_type,
             user: RelationshipResUser {
                 avatar: user.avatar,
                 avatar_decoration: user.avatar_decoration,
@@ -121,7 +129,13 @@ pub async fn new_relationship(
 ) -> impl IntoResponse {
     let normalized_discriminator: String = {
         if let Some(discriminator) = requested_user.discriminator {
-            discriminator.to_string()
+            let mut output = discriminator.to_string();
+
+            while output.chars().count() < 4 {
+                output.insert(0, '0');
+            }
+
+            output
         } else {
             0.to_string()
         }
