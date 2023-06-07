@@ -5,10 +5,11 @@ use async_nats::Client;
 use axum::http::Method;
 use axum::routing::get;
 use axum::{Extension, Router};
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, PaginatorTrait};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, info, log};
+use epl_common::database::entities::prelude::{Channel, Message, User};
 
 use crate::http::api;
 use epl_common::options::{EplOptions, Options};
@@ -120,13 +121,36 @@ pub struct AppState {
 struct IndexTemplate {
     instance_name: String,
     version: String,
+    message_count: u64,
+    channel_count: u64,
+    user_count: u64,
+    guild_count: u64,
 }
 
-async fn index() -> IndexTemplate {
+async fn index(Extension(state): Extension<AppState>,) -> IndexTemplate {
     let options = EplOptions::get();
+
+    let message_count = Message::find()
+        .count(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let channel_count = Channel::find()
+        .count(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let user_count = User::find()
+        .count(&state.conn)
+        .await
+        .expect("Failed to access database!");
 
     IndexTemplate {
         instance_name: options.name,
         version: VERSION.to_string(),
+        message_count,
+        channel_count,
+        user_count,
+        guild_count: 0,
     }
 }

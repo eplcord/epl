@@ -13,6 +13,38 @@
         </hgroup>
         <hr />
         <h5>An open-source reimplementation of Discord's backend. (For fun and profit!)</h5>
+
+        <p>
+            Currently hosting
+
+            <b>{{ message_count }}</b>
+            {% if message_count == 1 %}
+                message in
+            {% else %}
+                messages in
+            {% endif %}
+
+            <b>{{ channel_count }}</b>
+            {% if channel_count == 1 %}
+                channel for
+            {% else %}
+                channels for
+            {% endif %}
+
+            <b>{{ user_count }}</b>
+            {% if user_count == 1 %}
+                user in
+            {% else %}
+                users in
+            {% endif %}
+
+            <b>{{ guild_count }}</b>
+            {% if guild_count == 1 %}
+                guild.
+            {% else %}
+                guilds.
+            {% endif %}
+        </p>
     </main>
     <footer class="container">
         <a href="https://git.gaycatgirl.sex/litecord/epl">Source Code</a>
