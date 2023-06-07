@@ -35,6 +35,11 @@ pub enum Messages {
         /// ID of the channel created
         id: i64,
     },
+    /// A message has been created
+    MessageCreate {
+        /// ID of the message
+        id: i64
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

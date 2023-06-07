@@ -18,11 +18,13 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use tungstenite::protocol::frame::coding::{CloseCode, Data, OpCode};
 use tungstenite::protocol::frame::{CloseFrame, Frame};
+use crate::gateway::schema::message::MessageCreate;
 
 pub(crate) mod channel;
 pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
+pub(crate) mod message;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
@@ -32,6 +34,7 @@ pub enum DispatchTypes {
     RelationshipAdd(RelationshipAdd),
     RelationshipRemove(RelationshipRemove),
     ChannelCreate(ChannelCreate),
+    MessageCreate(MessageCreate),
 }
 
 impl From<DispatchTypes> for String {
@@ -42,6 +45,7 @@ impl From<DispatchTypes> for String {
             DispatchTypes::RelationshipAdd(_) => String::from("RELATIONSHIP_ADD"),
             DispatchTypes::RelationshipRemove(_) => String::from("RELATIONSHIP_REMOVE"),
             DispatchTypes::ChannelCreate(_) => String::from("CHANNEL_CREATE"),
+            DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE")
         }
     }
 }

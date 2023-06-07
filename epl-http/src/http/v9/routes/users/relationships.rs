@@ -15,17 +15,7 @@ use crate::http::v9::errors::{throw_http_error, APIErrorCode};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
-
-#[derive(Serialize)]
-pub struct RelationshipResUser {
-    avatar: Option<String>,
-    avatar_decoration: Option<String>,
-    discriminator: Option<String>,
-    global_name: Option<String>,
-    id: String,
-    public_flags: i64,
-    username: String,
-}
+use crate::http::v9::SharedUser;
 
 #[derive(Serialize)]
 pub struct RelationshipRes {
@@ -34,7 +24,7 @@ pub struct RelationshipRes {
     since: String,
     #[serde(rename = "type")]
     _type: i32,
-    user: RelationshipResUser,
+    user: SharedUser,
 }
 
 pub async fn get_all_relationships(
@@ -69,7 +59,7 @@ pub async fn get_all_relationships(
             nickname: None,
             since: i.timestamp.to_string(),
             _type: i.relationship_type,
-            user: RelationshipResUser {
+            user: SharedUser {
                 avatar: user.avatar,
                 avatar_decoration: user.avatar_decoration,
                 discriminator: Some(user.discriminator),
@@ -101,7 +91,7 @@ pub async fn get_all_relationships(
             nickname: None,
             since: i.timestamp.to_string(),
             _type: normalized_type,
-            user: RelationshipResUser {
+            user: SharedUser {
                 avatar: user.avatar,
                 avatar_decoration: user.avatar_decoration,
                 discriminator: Some(user.discriminator),

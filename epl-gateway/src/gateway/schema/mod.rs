@@ -12,6 +12,7 @@ pub(crate) mod presence;
 pub(crate) mod ready;
 pub(crate) mod relationships;
 pub(crate) mod voice_state;
+pub(crate) mod message;
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Clone, Default)]

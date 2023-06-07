@@ -65,4 +65,13 @@ impl Related<super::channel::Entity> for Entity {
     }
 }
 
+// impl Related<super::channel::Entity> for Entity {
+//     fn to() -> RelationDef {
+//         super::relationship::Relation::Channel.def()
+//     }
+//     fn via() -> Option<RelationDef> {
+//         Some(super::relationship::Relation::User.def().rev())
+//     }
+// }
+
 impl ActiveModelBehavior for ActiveModel {}

@@ -19,8 +19,9 @@ pub struct Model {
     pub webhook_id: Option<i64>,
     pub r#type: i32,
     pub application_id: Option<i64>,
-    pub message_reference: Option<i64>,
+    pub reference_message_id: Option<i64>,
     pub flags: Option<i32>,
+    pub reference_channel_id: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -32,10 +33,18 @@ pub enum Relation {
         on_update = "NoAction",
         on_delete = "NoAction"
     )]
-    Channel,
+    Channel2,
+    #[sea_orm(
+        belongs_to = "super::channel::Entity",
+        from = "Column::ReferenceChannelId",
+        to = "super::channel::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Channel1,
     #[sea_orm(
         belongs_to = "Entity",
-        from = "Column::MessageReference",
+        from = "Column::ReferenceMessageId",
         to = "Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
@@ -49,12 +58,6 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     User,
-}
-
-impl Related<super::channel::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Channel.def()
-    }
 }
 
 impl Related<super::user::Entity> for Entity {

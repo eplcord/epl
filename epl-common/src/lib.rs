@@ -12,6 +12,7 @@ pub mod flags;
 pub mod nats;
 pub mod options;
 pub mod rustflake;
+pub mod messages;
 
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")

@@ -8,6 +8,7 @@ use crate::gateway::schema::GatewayMessage;
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::nats::Messages;
+use crate::gateway::dispatch::message::dispatch_message_create;
 
 pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, state: &AppState) {
     match msg {
@@ -34,6 +35,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::ChannelCreate { id } => {
             dispatch_channel_create(thread_data, state, id).await;
+        }
+        Messages::MessageCreate { id } => {
+            dispatch_message_create(thread_data, state, id).await;
         }
     }
 }
