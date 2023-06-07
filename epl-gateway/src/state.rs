@@ -1,8 +1,8 @@
+use async_nats::Subscriber;
+use axum_tungstenite::WebSocket;
+use epl_common::rustflake::Snowflake;
 use std::net::IpAddr;
 use std::str::FromStr;
-use async_nats::Subscriber;
-use axum::extract::ws::WebSocket;
-use epl_common::rustflake::Snowflake;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ParseCompressionTypeError;
@@ -15,7 +15,7 @@ impl FromStr for CompressionType {
             "zlib" => Ok(Self::Zlib),
             "zlib-stream" => Ok(Self::ZlibStreams),
             "zstd-stream" => Ok(Self::ZstdStreams),
-            _ => Err(ParseCompressionTypeError{})
+            _ => Err(ParseCompressionTypeError {}),
         }
     }
 }
@@ -30,7 +30,7 @@ impl FromStr for EncodingType {
         match t {
             "etf" => Ok(Self::Etf),
             "json" => Ok(Self::Json),
-            _ => Err(ParseEncodingTypeError{})
+            _ => Err(ParseEncodingTypeError {}),
         }
     }
 }
@@ -39,13 +39,13 @@ impl FromStr for EncodingType {
 pub enum CompressionType {
     Zlib,
     ZlibStreams,
-    ZstdStreams
+    ZstdStreams,
 }
 
 #[derive(Eq, PartialEq, Clone)]
 pub enum EncodingType {
     Json,
-    Etf
+    Etf,
 }
 
 #[derive(Eq, PartialEq, Clone)]
@@ -68,5 +68,5 @@ pub struct ThreadData {
     pub nats: async_nats::Client,
     pub nats_subscriptions: Vec<Subscriber>,
     pub session_ip: IpAddr,
-    pub snowflake_factory: Snowflake
+    pub snowflake_factory: Snowflake,
 }

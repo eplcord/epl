@@ -412,6 +412,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-tungstenite"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e8cca61c9b88dec1ac7443ac7afdfe648718fb77d8774fb91751a2738dfc785"
+dependencies = [
+ "async-trait",
+ "axum-core",
+ "base64 0.20.0",
+ "bytes",
+ "futures-util",
+ "http",
+ "http-body",
+ "hyper",
+ "sha-1",
+ "tokio",
+ "tokio-tungstenite",
+]
+
+[[package]]
 name = "bae"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -429,6 +448,12 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64"
@@ -1077,11 +1102,14 @@ dependencies = [
  "async-nats",
  "axum",
  "axum-client-ip",
+ "axum-tungstenite",
  "blake3",
  "chrono",
  "epl-common",
  "flate2",
  "futures",
+ "futures-channel",
+ "futures-util",
  "jsonwebtoken",
  "migration",
  "rand",
@@ -1096,9 +1124,11 @@ dependencies = [
  "serde_with",
  "state",
  "tokio",
+ "tokio-tungstenite",
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "tungstenite",
  "zxcvbn",
 ]
 
@@ -2899,6 +2929,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "sha-1"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5058ada175748e33390e40e872bd0fe59a19f265d0158daa551c5a88a76009c"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest 0.10.6",
 ]
 
 [[package]]

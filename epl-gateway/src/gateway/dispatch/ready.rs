@@ -1,22 +1,30 @@
-use std::collections::HashSet;
-use sea_orm::{Condition, EntityTrait};
+use crate::gateway::dispatch;
+use crate::gateway::dispatch::{assemble_dispatch, send_close, send_message, DispatchTypes};
+use crate::gateway::schema::error_codes::ErrorCode::UnknownError;
+use crate::gateway::schema::ready::{
+    Consents, ConsentsEntry, OtherUser, PrivateChannel, ReadState, Ready, RelationshipReady,
+    Session, SessionClientInfo, Tutorial, UserGuildSettings,
+};
+use crate::state::ThreadData;
+use crate::AppState;
 use epl_common::database::auth::{get_all_sessions, get_session_by_token};
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Relationship, User};
 use epl_common::database::entities::{channel, channel_member, relationship, user};
-use crate::gateway::schema::ready::{Consents, ConsentsEntry, OtherUser, PrivateChannel, ReadState, Ready, RelationshipReady, Session, SessionClientInfo, Tutorial, UserGuildSettings};
 use epl_common::options::{EplOptions, Options};
-use crate::AppState;
-use crate::gateway::dispatch;
-use crate::gateway::dispatch::{assemble_dispatch, DispatchTypes, send_close, send_message};
-use crate::gateway::schema::error_codes::ErrorCode::UnknownError;
-use crate::state::ThreadData;
+use sea_orm::{Condition, EntityTrait};
+use std::collections::HashSet;
 
-use sea_orm::prelude::*;
 use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::RelationshipType;
+use sea_orm::prelude::*;
 
-pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::database::entities::user::Model, token: &String, state: &AppState) {
+pub async fn dispatch_ready(
+    thread_data: &mut ThreadData,
+    user: epl_common::database::entities::user::Model,
+    token: &String,
+    state: &AppState,
+) {
     // TODO: Stub guild settings until we learn more about them
     let user_guild_settings = UserGuildSettings {
         version: 0,
@@ -75,22 +83,20 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
     let sessions: Vec<Session> = get_all_sessions(&state.conn, &user.id)
         .await
         .into_iter()
-        .map(| session | {
-            Session {
-                status: session.status,
-                session_id: session.session_id,
-                client_info: SessionClientInfo {
-                    version: 0,
-                    os: session.os.unwrap_or(String::new()),
-                    client: match session.platform.unwrap_or(String::new()).as_str() {
-                        "Discord Client" => String::from("desktop"),
-                        "Discord Android" => String::from("mobile"),
-                        "Discord iOS" => String::from("mobile"),
-                        _ => String::from("web")
-                    },
+        .map(|session| Session {
+            status: session.status,
+            session_id: session.session_id,
+            client_info: SessionClientInfo {
+                version: 0,
+                os: session.os.unwrap_or(String::new()),
+                client: match session.platform.unwrap_or(String::new()).as_str() {
+                    "Discord Client" => String::from("desktop"),
+                    "Discord Android" => String::from("mobile"),
+                    "Discord iOS" => String::from("mobile"),
+                    _ => String::from("web"),
                 },
-                activities: vec![],
-            }
+            },
+            activities: vec![],
         })
         .collect();
 
@@ -166,7 +172,7 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
             .filter(
                 Condition::any()
                     .add(channel::Column::Type.eq(ChannelTypes::DM as i32))
-                    .add(channel::Column::Type.eq(ChannelTypes::GroupDM as i32))
+                    .add(channel::Column::Type.eq(ChannelTypes::GroupDM as i32)),
             )
             .one(&state.conn)
             .await
@@ -218,8 +224,9 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
         })
     }
 
-    send_message(thread_data, assemble_dispatch(
-        DispatchTypes::Ready(Box::from(Ready {
+    send_message(
+        thread_data,
+        assemble_dispatch(DispatchTypes::Ready(Box::from(Ready {
             version: 9,
             users: other_users,
             user_settings_proto: String::new(),
@@ -250,8 +257,9 @@ pub async fn dispatch_ready(thread_data: &mut ThreadData, user: epl_common::data
             api_code_version: 1,
             // We don't do analytics
             analytics_token: String::from(""),
-        }))
-    )).await;
+        }))),
+    )
+    .await;
 
     dispatch::ready_supplemental::dispatch_ready_supplemental(thread_data).await;
 }

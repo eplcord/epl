@@ -15,7 +15,7 @@ pub enum ErrorCode {
     ShardingRequired,
     InvalidAPIVersion,
     InvalidIntents,
-    DisallowedIntents
+    DisallowedIntents,
 }
 
 impl From<ErrorCode> for u16 {
@@ -34,7 +34,7 @@ impl From<ErrorCode> for u16 {
             ErrorCode::ShardingRequired => 4011,
             ErrorCode::InvalidAPIVersion => 4012,
             ErrorCode::InvalidIntents => 4013,
-            ErrorCode::DisallowedIntents => 4014
+            ErrorCode::DisallowedIntents => 4014,
         }
     }
 }

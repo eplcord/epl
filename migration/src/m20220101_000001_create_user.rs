@@ -17,8 +17,18 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(User::System).boolean().not_null().default(false))
-                    .col(ColumnDef::new(User::Bot).boolean().not_null().default(false))
+                    .col(
+                        ColumnDef::new(User::System)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(User::Bot)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(User::Username).text().not_null())
                     .col(ColumnDef::new(User::PasswordHash).text().not_null())
                     .col(ColumnDef::new(User::Discriminator).string_len(4).not_null())
@@ -31,10 +41,25 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(User::DateOfBirth).timestamp())
                     .col(ColumnDef::new(User::Email).text().not_null())
                     .col(ColumnDef::new(User::Phone).text())
-                    .col(ColumnDef::new(User::MFAEnabled).boolean().not_null().default(false))
-                    .col(ColumnDef::new(User::AcctVerified).boolean().not_null().default(false))
+                    .col(
+                        ColumnDef::new(User::MFAEnabled)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(User::AcctVerified)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(User::Flags).integer().not_null().default(0))
-                    .col(ColumnDef::new(User::NSFWAllowed).boolean().not_null().default(false))
+                    .col(
+                        ColumnDef::new(User::NSFWAllowed)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(User::PurchasedFlags).integer())
                     .col(ColumnDef::new(User::PremiumFlags).integer())
                     .col(ColumnDef::new(User::PremiumType).integer())
@@ -77,5 +102,5 @@ pub enum User {
     PurchasedFlags,
     PremiumSince,
     PremiumFlags,
-    PremiumType
+    PremiumType,
 }

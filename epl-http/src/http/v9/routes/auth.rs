@@ -1,26 +1,29 @@
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use axum::{Extension, Json};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum::{Extension, Json};
 use chrono::Datelike;
-use rand::Rng;
+use epl_common::options::{EplOptions, Options};
 use rand::rngs::StdRng;
-use sea_orm::*;
+use rand::Rng;
 use sea_orm::ActiveValue::Set;
+use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
-use epl_common::options::{EplOptions, Options};
 
 use epl_common::database::entities::{prelude::*, *};
 
+use crate::authorization_extractor::SessionContext;
+use crate::http::v9::errors::{throw_http_error, APIErrorCode, APIErrorField, APIErrorMessage};
+use crate::nats::send_nats_message;
 use crate::AppState;
-use epl_common::rustflake;
-use epl_common::database::auth::{create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id, NewUserEnum};
+use epl_common::database::auth::{
+    create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id,
+    NewUserEnum,
+};
 use epl_common::flags::{get_user_flags, UserFlags};
 use epl_common::nats::Messages;
-use crate::authorization_extractor::SessionContext;
-use crate::http::v9::errors::{APIErrorCode, APIErrorField, APIErrorMessage, throw_http_error};
-use crate::nats::send_nats_message;
+use epl_common::rustflake;
 
 pub async fn location_metadata() -> &'static str {
     ""
@@ -35,17 +38,17 @@ pub struct RegisterRequest {
     consent: bool,
     captcha_key: Option<String>,
     gift_code_sku_id: Option<String>,
-    invite: Option<String>
+    invite: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct RegisterResponse {
-    token: String
+    token: String,
 }
 
 pub async fn register(
     Extension(state): Extension<AppState>,
-    data: Json<RegisterRequest>
+    data: Json<RegisterRequest>,
 ) -> impl IntoResponse {
     let options = EplOptions::get();
     let mut error = Vec::new();
@@ -53,89 +56,85 @@ pub async fn register(
     // Exit early if registration is disabled
     if !options.registration {
         error.push(APIErrorField::Email {
-            _errors: vec![
-                APIErrorMessage {
-                    code: "REGISTRATION_DISABLED".to_string(),
-                    message: "Registration has been disabled".to_string()
-                }
-            ]
+            _errors: vec![APIErrorMessage {
+                code: "REGISTRATION_DISABLED".to_string(),
+                message: "Registration has been disabled".to_string(),
+            }],
         });
 
-        return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await))
+        return Err((
+            StatusCode::BAD_REQUEST,
+            throw_http_error(APIErrorCode::InvalidFormBody, error).await,
+        ));
     }
 
-    let password_hash = generate_password_hash(&data.password,
-                                               vec![data.0.username.as_str(), data.0.email.as_str()]);
+    let password_hash = generate_password_hash(
+        &data.password,
+        vec![data.0.username.as_str(), data.0.email.as_str()],
+    );
 
     if password_hash.is_err() {
         match password_hash.clone().err().unwrap().kind {
             NewUserEnum::BadPassword => {
                 error.push(APIErrorField::Password {
-                    _errors: vec![
-                        APIErrorMessage {
-                            code: "INVALID_PASSWORD".to_string(),
-                            message: "Password is invalid".to_string()
-                        }
-                    ]
+                    _errors: vec![APIErrorMessage {
+                        code: "INVALID_PASSWORD".to_string(),
+                        message: "Password is invalid".to_string(),
+                    }],
                 });
             }
             NewUserEnum::TooShortPassword => {
                 error.push(APIErrorField::Password {
-                    _errors: vec![
-                        APIErrorMessage {
-                            code: "INVALID_PASSWORD".to_string(),
-                            message: "Password must be over 8 characters long".to_string()
-                        }
-                    ]
+                    _errors: vec![APIErrorMessage {
+                        code: "INVALID_PASSWORD".to_string(),
+                        message: "Password must be over 8 characters long".to_string(),
+                    }],
                 });
             }
             NewUserEnum::TooLongPassword => {
                 error.push(APIErrorField::Password {
-                    _errors: vec![
-                        APIErrorMessage {
-                            code: "INVALID_PASSWORD".to_string(),
-                            message: "Password must be under 999 characters long".to_string()
-                        }
-                    ]
+                    _errors: vec![APIErrorMessage {
+                        code: "INVALID_PASSWORD".to_string(),
+                        message: "Password must be under 999 characters long".to_string(),
+                    }],
                 });
             }
             NewUserEnum::WeakPassword => {
                 error.push(APIErrorField::Password {
-                    _errors: vec![
-                        APIErrorMessage {
-                            code: "INVALID_PASSWORD".to_string(),
-                            message: "Password is too weak or common to use".to_string()
-                        }
-                    ]
+                    _errors: vec![APIErrorMessage {
+                        code: "INVALID_PASSWORD".to_string(),
+                        message: "Password is too weak or common to use".to_string(),
+                    }],
                 });
             }
             _ => {}
         }
     }
 
-    let date_of_birth = chrono::NaiveDate::parse_from_str(
-        &data.0.date_of_birth, "%Y-%m-%d"
-    ).unwrap().and_hms_opt(0, 0, 0);
+    let date_of_birth = chrono::NaiveDate::parse_from_str(&data.0.date_of_birth, "%Y-%m-%d")
+        .unwrap()
+        .and_hms_opt(0, 0, 0);
 
     // Check if the user is underage
     if date_of_birth.unwrap().year() >= (chrono::Local::now().year() - 13) {
         error.push(APIErrorField::DateOfBirth {
-            _errors: vec![
-                APIErrorMessage {
-                    code: "DATE_OF_BIRTH_UNDERAGE".to_string(),
-                    message: "You need to be 13 or older in order to use Discord.".to_string()
-                }
-            ]
+            _errors: vec![APIErrorMessage {
+                code: "DATE_OF_BIRTH_UNDERAGE".to_string(),
+                message: "You need to be 13 or older in order to use Discord.".to_string(),
+            }],
         });
     }
 
     if !error.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            throw_http_error(APIErrorCode::InvalidFormBody, error).await,
+        ));
     }
 
     let password_hash = password_hash.unwrap();
 
-    let mut snowflake_factory =  rustflake::Snowflake::default();
+    let mut snowflake_factory = rustflake::Snowflake::default();
     let mut rng: StdRng = rand::SeedableRng::from_entropy();
 
     let new_user_id = snowflake_factory.generate();
@@ -171,21 +170,22 @@ pub async fn register(
         accent_color: Default::default(),
     };
 
-    let user =  create_user(&state.conn, new_user).await;
+    let user = create_user(&state.conn, new_user).await;
 
     let user_id = match user {
         Ok(user) => user,
         Err(_) => {
             error.push(APIErrorField::Email {
-                _errors: vec![
-                    APIErrorMessage {
-                        code: "SERVER_ERROR".to_string(),
-                        message: "A server error occurred, try again later.".to_string()
-                    }
-                ]
+                _errors: vec![APIErrorMessage {
+                    code: "SERVER_ERROR".to_string(),
+                    message: "A server error occurred, try again later.".to_string(),
+                }],
             });
 
-            return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await));
+            return Err((
+                StatusCode::BAD_REQUEST,
+                throw_http_error(APIErrorCode::InvalidFormBody, error).await,
+            ));
         }
     };
 
@@ -193,23 +193,23 @@ pub async fn register(
 
     info!("New account registered: {}", user_id);
 
-    Ok(Json(RegisterResponse{ token }))
+    Ok(Json(RegisterResponse { token }))
 }
 
 #[derive(Deserialize)]
 pub struct LoginReq {
     pub login: String,
-    pub password: String
+    pub password: String,
 }
 
 #[derive(Serialize)]
 pub struct LoginRes {
-    pub token: String
+    pub token: String,
 }
 
 pub async fn login(
     Extension(state): Extension<AppState>,
-    data: Json<LoginReq>
+    data: Json<LoginReq>,
 ) -> impl IntoResponse {
     let mut error = Vec::new();
 
@@ -223,57 +223,59 @@ pub async fn login(
     let requested_user = match requested_user {
         None => {
             error.push(APIErrorField::Email {
-                _errors: vec![
-                    APIErrorMessage {
-                        code: "INVALID_LOGIN".to_string(),
-                        message: "Login or password is invalid.".to_string()
-                    }
-                ]
+                _errors: vec![APIErrorMessage {
+                    code: "INVALID_LOGIN".to_string(),
+                    message: "Login or password is invalid.".to_string(),
+                }],
             });
 
             error.push(APIErrorField::Password {
-                _errors: vec![
-                    APIErrorMessage {
-                        code: "INVALID_LOGIN".to_string(),
-                        message: "Login or password is invalid.".to_string()
-                    }
-                ]
+                _errors: vec![APIErrorMessage {
+                    code: "INVALID_LOGIN".to_string(),
+                    message: "Login or password is invalid.".to_string(),
+                }],
             });
 
-            return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await));
+            return Err((
+                StatusCode::BAD_REQUEST,
+                throw_http_error(APIErrorCode::InvalidFormBody, error).await,
+            ));
         }
-        Some(user) => {
-            user
-        }
+        Some(user) => user,
     };
 
     // Verify password
-    let password_hash = PasswordHash::new(&requested_user.password_hash).expect("Failed to parse password hash!");
+    let password_hash =
+        PasswordHash::new(&requested_user.password_hash).expect("Failed to parse password hash!");
 
-    if Argon2::default().verify_password(data.password.as_bytes(), &password_hash).is_err() {
+    if Argon2::default()
+        .verify_password(data.password.as_bytes(), &password_hash)
+        .is_err()
+    {
         error.push(APIErrorField::Email {
-            _errors: vec![
-                APIErrorMessage {
-                    code: "INVALID_LOGIN".to_string(),
-                    message: "Login or password is invalid.".to_string()
-                }
-            ]
+            _errors: vec![APIErrorMessage {
+                code: "INVALID_LOGIN".to_string(),
+                message: "Login or password is invalid.".to_string(),
+            }],
         });
 
         error.push(APIErrorField::Password {
-            _errors: vec![
-                APIErrorMessage {
-                    code: "INVALID_LOGIN".to_string(),
-                    message: "Login or password is invalid.".to_string()
-                }
-            ]
+            _errors: vec![APIErrorMessage {
+                code: "INVALID_LOGIN".to_string(),
+                message: "Login or password is invalid.".to_string(),
+            }],
         });
 
-        return Err((StatusCode::BAD_REQUEST, throw_http_error(APIErrorCode::InvalidFormBody, error).await));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            throw_http_error(APIErrorCode::InvalidFormBody, error).await,
+        ));
     }
 
     // Generate session
-    let token = generate_session(&state.conn, requested_user.id).await.unwrap();
+    let token = generate_session(&state.conn, requested_user.id)
+        .await
+        .unwrap();
 
     Ok(Json(LoginRes { token }))
 }
@@ -291,8 +293,8 @@ pub async fn logout(
     _data: Json<LogoutReq>,
 ) -> impl IntoResponse {
     match session_context.session.delete(&state.conn).await {
-        Ok(_) => StatusCode::OK ,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
@@ -304,25 +306,23 @@ pub async fn verify_email(
     // TODO: Once we have SMTP, queue a verification email to be sent
 
     if get_user_flags(session_context.user.flags).contains(&UserFlags::VerifiedEmail) {
-        return StatusCode::BAD_REQUEST
+        return StatusCode::BAD_REQUEST;
     }
 
-    let mut updated_user: user::ActiveModel = session_context
-        .user
-        .into_active_model();
+    let mut updated_user: user::ActiveModel = session_context.user.into_active_model();
 
     updated_user.acct_verified = Set(true);
     updated_user.flags = Set(updated_user.flags.unwrap() + UserFlags::VerifiedEmail as i64);
 
     match updated_user.update(&state.conn).await {
         Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
 #[derive(Serialize)]
 pub struct SessionsRes {
-    pub user_sessions: Vec<Session>
+    pub user_sessions: Vec<Session>,
 }
 
 #[derive(Serialize)]
@@ -336,7 +336,7 @@ pub struct Session {
 pub struct ClientInfo {
     os: String,
     platform: String,
-    location: String
+    location: String,
 }
 
 pub async fn sessions(
@@ -357,13 +357,15 @@ pub async fn sessions(
         })
         .collect();
 
-    Json(SessionsRes { user_sessions: sessions })
+    Json(SessionsRes {
+        user_sessions: sessions,
+    })
 }
 
 #[derive(Deserialize)]
 pub struct LogoutSessionReq {
     password: String,
-    session_id_hashes: Vec<String>
+    session_id_hashes: Vec<String>,
 }
 
 pub async fn logout_session(
@@ -372,12 +374,18 @@ pub async fn logout_session(
     data: Json<LogoutSessionReq>,
 ) -> impl IntoResponse {
     // Verify password
-    let password_hash = PasswordHash::new(&session_context.user.password_hash).expect("Failed to parse password hash!");
+    let password_hash = PasswordHash::new(&session_context.user.password_hash)
+        .expect("Failed to parse password hash!");
 
-    if Argon2::default().verify_password(data.password.as_bytes(), &password_hash).is_err() {
-        return (StatusCode::from(APIErrorCode::PasswordDoesNotMatch),
-                throw_http_error(APIErrorCode::PasswordDoesNotMatch, vec![]
-                ).await).into_response();
+    if Argon2::default()
+        .verify_password(data.password.as_bytes(), &password_hash)
+        .is_err()
+    {
+        return (
+            StatusCode::from(APIErrorCode::PasswordDoesNotMatch),
+            throw_http_error(APIErrorCode::PasswordDoesNotMatch, vec![]).await,
+        )
+            .into_response();
     }
 
     for i in &data.session_id_hashes {
@@ -385,12 +393,18 @@ pub async fn logout_session(
 
         match session {
             Ok(session) => {
-                session.into_active_model().delete(&state.conn).await.expect("Failed to remove session from db!");
+                session
+                    .into_active_model()
+                    .delete(&state.conn)
+                    .await
+                    .expect("Failed to remove session from db!");
 
-                send_nats_message(&state.nats_client,
-                                  session_context.user.id.to_string(),
-                                  Messages::InvalidateGatewaySession { session: i.clone() }
-                ).await;
+                send_nats_message(
+                    &state.nats_client,
+                    session_context.user.id.to_string(),
+                    Messages::InvalidateGatewaySession { session: i.clone() },
+                )
+                .await;
             }
             Err(_) => {
                 // TODO: see what discord returns for an invalid session id

@@ -1,4 +1,4 @@
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Presence {
@@ -6,7 +6,7 @@ pub struct Presence {
     since: Option<i32>,
     activities: Option<Vec<Activity>>,
     client_status: Option<ClientStatus>,
-    afk: Option<bool>
+    afk: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -16,10 +16,8 @@ pub enum ClientStatus {
     #[serde(rename = "mobile")]
     Mobile(String),
     #[serde(rename = "web")]
-    Web(String)
+    Web(String),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Activity {
-
-}
+pub struct Activity {}

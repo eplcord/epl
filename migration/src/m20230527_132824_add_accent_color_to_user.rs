@@ -1,5 +1,5 @@
-use sea_orm_migration::prelude::*;
 use crate::m20220101_000001_create_user::User;
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -11,11 +11,8 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(User::Table)
-                    .add_column(
-                        ColumnDef::new(Alias::new("accent_color"))
-                            .text()
-                    )
-                    .to_owned()
+                    .add_column(ColumnDef::new(Alias::new("accent_color")).text())
+                    .to_owned(),
             )
             .await
     }
@@ -26,7 +23,7 @@ impl MigrationTrait for Migration {
                 Table::alter()
                     .table(User::Table)
                     .drop_column(Alias::new("accent_color"))
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }

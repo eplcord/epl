@@ -1,5 +1,5 @@
-use sea_orm_migration::prelude::*;
 use crate::m20220101_000001_create_user::User;
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -12,7 +12,12 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Channel::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Channel::Id).big_integer().not_null().primary_key())
+                    .col(
+                        ColumnDef::new(Channel::Id)
+                            .big_integer()
+                            .not_null()
+                            .primary_key(),
+                    )
                     .col(ColumnDef::new(Channel::Type).integer().not_null())
                     // TODO: Since we don't have guilds yet at this point, we can make a foreign key later
                     .col(ColumnDef::new(Channel::GuildID).big_integer())
@@ -41,20 +46,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Channel::DefaultThreadRateLimitPerUser).integer())
                     .col(ColumnDef::new(Channel::DefaultSortOrder).integer())
                     .col(ColumnDef::new(Channel::DefaultForumLayout).integer())
-
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-channel_owner_id-user_id")
                             .from(Channel::Table, Channel::OwnerID)
-                            .to(User::Table, User::Id)
+                            .to(User::Table, User::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-relationship_peer-user_id")
                             .from(Channel::Table, Channel::ParentID)
-                            .to(Channel::Table, Channel::Id)
+                            .to(Channel::Table, Channel::Id),
                     )
-
                     .to_owned(),
             )
             .await
@@ -95,5 +98,5 @@ pub enum Channel {
     Flags,
     DefaultThreadRateLimitPerUser,
     DefaultSortOrder,
-    DefaultForumLayout
+    DefaultForumLayout,
 }

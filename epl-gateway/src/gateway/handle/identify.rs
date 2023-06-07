@@ -6,12 +6,12 @@ use tracing::debug;
 use crate::gateway::schema::identify::Identify;
 
 use crate::gateway::dispatch;
-use crate::state::{GatewayState, EncodingType, CompressionType, ThreadData};
+use crate::gateway::dispatch::send_close;
+use crate::gateway::schema::error_codes::ErrorCode::AuthenticationFailed;
+use crate::state::{CompressionType, EncodingType, GatewayState, ThreadData};
 use crate::AppState;
 use epl_common::database::auth::{get_session_by_token, get_user_from_session_by_token};
 use epl_common::get_location_from_ip;
-use crate::gateway::dispatch::send_close;
-use crate::gateway::schema::error_codes::ErrorCode::AuthenticationFailed;
 
 pub async fn handle_identify(thread_data: &mut ThreadData, data: Identify, state: &AppState) {
     debug!("Hello from handle_identify!");
@@ -45,20 +45,24 @@ pub async fn handle_identify(thread_data: &mut ThreadData, data: Identify, state
             send_close(thread_data, AuthenticationFailed).await;
             return;
         }
-    }.into_active_model();
+    }
+    .into_active_model();
 
     session.last_used = Set(Utc::now().naive_utc());
 
-    let props = data.properties.unwrap();
-
-    session.os = Set(props.os);
-    session.platform = Set(props.browser);
+    if let Some(props) = data.properties {
+        session.os = Set(props.os);
+        session.platform = Set(props.browser);
+    }
 
     session.location = Set(Some(get_location_from_ip(thread_data.session_ip)));
 
-    let session_id =  session.clone().session_id.unwrap();
+    let session_id = session.clone().session_id.unwrap();
 
-    session.update(&state.conn).await.expect("Failed to update session with props");
+    session
+        .update(&state.conn)
+        .await
+        .expect("Failed to update session with props");
 
     // TODO: calculate these
     let gateway_state = GatewayState {
@@ -76,10 +80,11 @@ pub async fn handle_identify(thread_data: &mut ThreadData, data: Identify, state
     thread_data.gateway_state = gateway_state;
 
     thread_data.nats_subscriptions.push(
-        thread_data.nats
-            .subscribe(format!("{}", thread_data.gateway_state.user_id.unwrap()).into())
+        thread_data
+            .nats
+            .subscribe(format!("{}", thread_data.gateway_state.user_id.unwrap()))
             .await
-            .expect("Failed to subscribe!")
+            .expect("Failed to subscribe!"),
     );
 
     dispatch::ready::dispatch_ready(thread_data, user, &data.token, state).await;

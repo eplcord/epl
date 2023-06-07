@@ -1,17 +1,17 @@
-pub mod relationships;
 pub mod channels;
+pub mod relationships;
 
-use axum::{Extension, Json};
+use crate::authorization_extractor::SessionContext;
+use crate::AppState;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum::{Extension, Json};
+use epl_common::database::entities::user;
+use epl_common::flags::{generate_public_flags, get_user_flags, Badge};
+use epl_common::Stub;
 use sea_orm::EntityTrait;
 use serde_derive::{Deserialize, Serialize};
-use epl_common::database::entities::user;
-use epl_common::flags::{Badge, generate_public_flags, get_user_flags};
-use epl_common::Stub;
-use crate::AppState;
-use crate::authorization_extractor::SessionContext;
 
 #[derive(Serialize)]
 pub struct ProfileRes {
@@ -68,7 +68,7 @@ pub struct ConnectedAccount {
     metadata: Option<ConnectedAccountMetadata>,
     name: String,
     _type: String,
-    verified: bool
+    verified: bool,
 }
 
 #[derive(Serialize)]
@@ -79,27 +79,27 @@ pub enum ConnectedAccountMetadata {
         top_rated_seller: String,
         unique_negative_feedback_count: String,
         unique_positive_feedback_count: String,
-        verified: String
+        verified: String,
     },
     Steam {
         created_at: String,
         game_count: String,
         item_count_dota2: String,
-        item_count_tf2: String
-    }
+        item_count_tf2: String,
+    },
 }
 
 #[derive(Deserialize)]
 pub struct ProfileQuery {
     with_mutual_guilds: bool,
-    with_mutual_friends_count: bool
+    with_mutual_friends_count: bool,
 }
 
 pub async fn profile(
     Extension(state): Extension<AppState>,
     Extension(session_context): Extension<SessionContext>,
     Path(requested_user_id): Path<i64>,
-    profile_query: Query<ProfileQuery>
+    profile_query: Query<ProfileQuery>,
 ) -> impl IntoResponse {
     let requested_user_opt: Option<user::Model> =
         epl_common::database::entities::prelude::User::find_by_id(requested_user_id)
@@ -109,7 +109,7 @@ pub async fn profile(
 
     if requested_user_opt.is_none() {
         // TODO: check discord's status for invalid user ids
-        return (StatusCode::NOT_FOUND).into_response()
+        return (StatusCode::NOT_FOUND).into_response();
     }
 
     let requested_user = requested_user_opt.unwrap();
@@ -154,7 +154,6 @@ pub async fn profile(
             discriminator: requested_user.discriminator,
             flags: {
                 if session_context.user.id.eq(&requested_user_id) {
-
                     requested_user.flags
                 } else {
                     generate_public_flags(flags.clone())

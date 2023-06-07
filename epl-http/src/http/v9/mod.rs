@@ -1,2 +1,2 @@
-pub(crate) mod routes;
 pub(crate) mod errors;
+pub(crate) mod routes;

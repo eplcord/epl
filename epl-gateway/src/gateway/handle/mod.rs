@@ -3,27 +3,31 @@ mod identify;
 use tracing::debug;
 
 use crate::gateway::handle::identify::handle_identify;
-use crate::gateway::schema::opcodes::{GatewayData, get_opcode, OpCodes};
+use crate::gateway::schema::opcodes::{get_opcode, GatewayData, OpCodes};
 
-use crate::AppState;
 use crate::gateway::dispatch::{send_close, send_message};
 use crate::gateway::schema::error_codes::ErrorCode::DecodeError;
 use crate::gateway::schema::GatewayMessage;
 use crate::state::ThreadData;
+use crate::AppState;
 
-pub async fn handle_op(thread_data: &mut ThreadData, msg: String, state: &AppState){
+pub async fn handle_op(thread_data: &mut ThreadData, msg: String, state: &AppState) {
     let op = get_opcode(msg.clone());
     if op.is_ok() {
         let op = op.unwrap();
 
         match op.0 {
             OpCodes::Heartbeat => {
-                send_message(thread_data, GatewayMessage {
-                    op: OpCodes::HeartbeatAck,
-                    d: None,
-                    s: None,
-                    t: None,
-                }).await;
+                send_message(
+                    thread_data,
+                    GatewayMessage {
+                        op: OpCodes::HeartbeatAck,
+                        d: None,
+                        s: None,
+                        t: None,
+                    },
+                )
+                .await;
             }
             OpCodes::Identify => {
                 if let GatewayData::Identify(data) = op.1 {

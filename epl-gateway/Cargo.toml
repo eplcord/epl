@@ -27,9 +27,15 @@ tower-http = { version = "*", features = ["cors"] }
 axum-client-ip = "0.4.1"
 
 ## Gateway
+tungstenite = "^0.18.0"
+tokio-tungstenite = "^0.18.0"
+axum-tungstenite = "0.2.0"
+
 state = { version = "^0.5", features = ["tls"] }
 
 futures = "0.3.27"
+futures-channel = "0.3.28"
+futures-util = "0.3.28"
 
 serde_eetf = "0.2.0"
 flate2 = "1.0.26"

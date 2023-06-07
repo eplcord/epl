@@ -1,20 +1,20 @@
-use axum::{Extension, Json};
+use crate::authorization_extractor::SessionContext;
+use crate::nats::{send_relationship_update, RelationshipUpdate};
+use crate::AppState;
 use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum::{Extension, Json};
+use epl_common::database::entities::prelude::{Relationship, User};
+use epl_common::database::entities::{relationship, user};
 use sea_orm::ActiveValue::Set;
 use sea_orm::{Condition, IntoActiveModel};
 use serde_derive::{Deserialize, Serialize};
-use epl_common::database::entities::prelude::{Relationship, User};
-use epl_common::database::entities::{relationship, user};
-use crate::AppState;
-use crate::authorization_extractor::SessionContext;
-use crate::nats::{RelationshipUpdate, send_relationship_update};
 
-use sea_orm::prelude::*;
+use crate::http::v9::errors::{throw_http_error, APIErrorCode};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::RelationshipType;
-use crate::http::v9::errors::{APIErrorCode, throw_http_error};
+use sea_orm::prelude::*;
 
 #[derive(Serialize)]
 pub struct RelationshipResUser {
@@ -24,7 +24,7 @@ pub struct RelationshipResUser {
     global_name: Option<String>,
     id: String,
     public_flags: i64,
-    username: String
+    username: String,
 }
 
 #[derive(Serialize)]
@@ -34,7 +34,7 @@ pub struct RelationshipRes {
     since: String,
     #[serde(rename = "type")]
     _type: i32,
-    user: RelationshipResUser
+    user: RelationshipResUser,
 }
 
 pub async fn get_all_relationships(
@@ -119,13 +119,13 @@ pub async fn get_all_relationships(
 #[derive(Deserialize)]
 pub struct SendFriendRequestReq {
     username: String,
-    discriminator: Option<u16>
+    discriminator: Option<u16>,
 }
 
 pub async fn new_relationship(
     Extension(state): Extension<AppState>,
     Extension(session_context): Extension<SessionContext>,
-    Json(requested_user): Json<SendFriendRequestReq>
+    Json(requested_user): Json<SendFriendRequestReq>,
 ) -> impl IntoResponse {
     let normalized_discriminator: String = {
         if let Some(discriminator) = requested_user.discriminator {
@@ -149,31 +149,26 @@ pub async fn new_relationship(
         .expect("Failed to access database!");
 
     match requested_user {
-        None => {
-            StatusCode::NOT_FOUND.into_response()
-        }
+        None => StatusCode::NOT_FOUND.into_response(),
         Some(user) => {
             if user.id.eq(&session_context.user.id) {
                 return (
                     StatusCode::BAD_REQUEST,
-                    throw_http_error(
-                        APIErrorCode::CannotSendFriendRequestToSelf,
-                        vec![]
-                    ).await
-                ).into_response()
+                    throw_http_error(APIErrorCode::CannotSendFriendRequestToSelf, vec![]).await,
+                )
+                    .into_response();
             }
 
             // Check if a relationship already exists
-            let relationship_model = get_relationship(session_context.user.id, user.id, &state).await;
+            let relationship_model =
+                get_relationship(session_context.user.id, user.id, &state).await;
 
             if relationship_model.is_some() {
                 return (
                     StatusCode::BAD_REQUEST,
-                    throw_http_error(
-                        APIErrorCode::FriendRequestBlocked,
-                        vec![]
-                    ).await
-                ).into_response()
+                    throw_http_error(APIErrorCode::FriendRequestBlocked, vec![]).await,
+                )
+                    .into_response();
             }
 
             let new_relationship = relationship::ActiveModel {
@@ -183,32 +178,43 @@ pub async fn new_relationship(
                 timestamp: Set(chrono::Utc::now().naive_utc()),
             };
 
-            match Relationship::insert(new_relationship).exec(&state.conn).await {
+            match Relationship::insert(new_relationship)
+                .exec(&state.conn)
+                .await
+            {
                 Ok(_) => {
-                    send_relationship_update(&state, user.id, session_context.user.id, RelationshipUpdate::Create).await;
+                    send_relationship_update(
+                        &state,
+                        user.id,
+                        session_context.user.id,
+                        RelationshipUpdate::Create,
+                    )
+                    .await;
 
                     StatusCode::OK.into_response()
                 }
-                Err(_) => {
-                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                }
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             }
         }
     }
 }
 
 // TODO: Move me to be shared across all API versions
-pub async fn get_relationship(user_a: i64, user_b: i64, state: &AppState) -> Option<relationship::Model> {
+pub async fn get_relationship(
+    user_a: i64,
+    user_b: i64,
+    state: &AppState,
+) -> Option<relationship::Model> {
     Relationship::find()
         .filter(
             Condition::any()
                 .add(relationship::Column::Creator.eq(user_a))
-                .add(relationship::Column::Creator.eq(user_b))
+                .add(relationship::Column::Creator.eq(user_b)),
         )
         .filter(
             Condition::any()
                 .add(relationship::Column::Peer.eq(user_a))
-                .add(relationship::Column::Peer.eq(user_b))
+                .add(relationship::Column::Peer.eq(user_b)),
         )
         .one(&state.conn)
         .await
@@ -218,22 +224,28 @@ pub async fn get_relationship(user_a: i64, user_b: i64, state: &AppState) -> Opt
 pub async fn delete_relationship(
     Extension(state): Extension<AppState>,
     Extension(session_context): Extension<SessionContext>,
-    Path(requested_user_id): Path<i64>
+    Path(requested_user_id): Path<i64>,
 ) -> impl IntoResponse {
-    let relationship_model = get_relationship(session_context.user.id, requested_user_id, &state).await;
+    let relationship_model =
+        get_relationship(session_context.user.id, requested_user_id, &state).await;
 
     match relationship_model {
-        None => {
-            StatusCode::BAD_REQUEST
-        }
+        None => StatusCode::BAD_REQUEST,
         Some(relationship) => {
             let cached_relationship = (relationship.creator, relationship.peer);
-            relationship.into_active_model()
+            relationship
+                .into_active_model()
                 .delete(&state.conn)
                 .await
                 .expect("Failed to delete relationship!");
 
-            send_relationship_update(&state, cached_relationship.0, cached_relationship.1, RelationshipUpdate::Remove).await;
+            send_relationship_update(
+                &state,
+                cached_relationship.0,
+                cached_relationship.1,
+                RelationshipUpdate::Remove,
+            )
+            .await;
 
             StatusCode::NO_CONTENT
         }
@@ -243,7 +255,7 @@ pub async fn delete_relationship(
 #[derive(Deserialize)]
 pub struct ModifyRelationshipReq {
     #[serde(rename = "type")]
-    _type: Option<i32>
+    _type: Option<i32>,
 }
 
 pub async fn modify_relationship(
@@ -255,14 +267,25 @@ pub async fn modify_relationship(
     match modify_relationship_req._type.is_some() {
         true => {
             // We're probably blocking a user, lets see if a relationship already exists
-            let relationship_model = get_relationship(session_context.user.id, requested_user_id, &state).await;
+            let relationship_model =
+                get_relationship(session_context.user.id, requested_user_id, &state).await;
 
             if let Some(relationship) = relationship_model {
                 let cached_relationship = (relationship.creator, relationship.peer);
 
-                relationship.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
+                relationship
+                    .into_active_model()
+                    .delete(&state.conn)
+                    .await
+                    .expect("Failed to access database!");
 
-                send_relationship_update(&state, cached_relationship.0, cached_relationship.1, RelationshipUpdate::Remove).await;
+                send_relationship_update(
+                    &state,
+                    cached_relationship.0,
+                    cached_relationship.1,
+                    RelationshipUpdate::Remove,
+                )
+                .await;
             }
 
             let new_relationship = relationship::ActiveModel {
@@ -272,20 +295,28 @@ pub async fn modify_relationship(
                 timestamp: Set(chrono::Utc::now().naive_utc()),
             };
 
-            match Relationship::insert(new_relationship).exec(&state.conn).await {
+            match Relationship::insert(new_relationship)
+                .exec(&state.conn)
+                .await
+            {
                 Ok(_) => {
-                    send_relationship_update(&state, session_context.user.id, requested_user_id, RelationshipUpdate::Block).await;
+                    send_relationship_update(
+                        &state,
+                        session_context.user.id,
+                        requested_user_id,
+                        RelationshipUpdate::Block,
+                    )
+                    .await;
 
                     StatusCode::NO_CONTENT.into_response()
                 }
-                Err(_) => {
-                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                }
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             }
         }
         false => {
             // Let's see if we're accepting a friend request or sending a new friend request directly (skipping new_relationship)
-            let relationship_model = get_relationship(session_context.user.id, requested_user_id, &state).await;
+            let relationship_model =
+                get_relationship(session_context.user.id, requested_user_id, &state).await;
 
             match relationship_model {
                 None => {
@@ -293,11 +324,10 @@ pub async fn modify_relationship(
                     if requested_user_id.eq(&session_context.user.id) {
                         return (
                             StatusCode::BAD_REQUEST,
-                            throw_http_error(
-                                APIErrorCode::CannotSendFriendRequestToSelf,
-                                vec![]
-                            ).await
-                        ).into_response()
+                            throw_http_error(APIErrorCode::CannotSendFriendRequestToSelf, vec![])
+                                .await,
+                        )
+                            .into_response();
                     };
 
                     let new_relationship = relationship::ActiveModel {
@@ -307,15 +337,22 @@ pub async fn modify_relationship(
                         timestamp: Set(chrono::Utc::now().naive_utc()),
                     };
 
-                    match Relationship::insert(new_relationship).exec(&state.conn).await {
+                    match Relationship::insert(new_relationship)
+                        .exec(&state.conn)
+                        .await
+                    {
                         Ok(_) => {
-                            send_relationship_update(&state, requested_user_id, session_context.user.id, RelationshipUpdate::Create).await;
+                            send_relationship_update(
+                                &state,
+                                requested_user_id,
+                                session_context.user.id,
+                                RelationshipUpdate::Create,
+                            )
+                            .await;
 
                             StatusCode::NO_CONTENT.into_response()
                         }
-                        Err(_) => {
-                            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                        }
+                        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
                     }
                 }
                 Some(relationship) => {
@@ -323,9 +360,18 @@ pub async fn modify_relationship(
 
                     let mut new_relationship = relationship.into_active_model();
                     new_relationship.relationship_type = Set(RelationshipType::Friend as i32);
-                    new_relationship.update(&state.conn).await.expect("Failed to access database!");
+                    new_relationship
+                        .update(&state.conn)
+                        .await
+                        .expect("Failed to access database!");
 
-                    send_relationship_update(&state, cached_relationship.0, cached_relationship.1, RelationshipUpdate::Accept).await;
+                    send_relationship_update(
+                        &state,
+                        cached_relationship.0,
+                        cached_relationship.1,
+                        RelationshipUpdate::Accept,
+                    )
+                    .await;
 
                     StatusCode::NO_CONTENT.into_response()
                 }

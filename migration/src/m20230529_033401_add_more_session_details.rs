@@ -1,6 +1,6 @@
+use crate::m20230316_064242_create_session::Session;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::sea_orm::ConnectionTrait;
-use crate::m20230316_064242_create_session::Session;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -11,9 +11,7 @@ impl MigrationTrait for Migration {
         // Truncate database because we don't have a session_id for sessions
         let db = manager.get_connection();
 
-        db.execute_unprepared(
-            "TRUNCATE session;"
-        ).await?;
+        db.execute_unprepared("TRUNCATE session;").await?;
 
         manager
             .alter_table(
@@ -24,36 +22,19 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Alias::new("session_id"))
                             .text()
                             .not_null()
-                            .primary_key()
+                            .primary_key(),
                     )
-                    .add_column(
-                        ColumnDef::new(Session::Token)
-                            .text()
-                            .not_null()
-                    )
-                    .add_column(
-                        ColumnDef::new(Alias::new("status"))
-                            .text()
-                            .not_null()
-                    )
-                    .add_column(
-                        ColumnDef::new(Alias::new("os"))
-                        .text()
-                    )
-                    .add_column(
-                        ColumnDef::new(Alias::new("platform"))
-                        .text()
-                    )
+                    .add_column(ColumnDef::new(Session::Token).text().not_null())
+                    .add_column(ColumnDef::new(Alias::new("status")).text().not_null())
+                    .add_column(ColumnDef::new(Alias::new("os")).text())
+                    .add_column(ColumnDef::new(Alias::new("platform")).text())
                     .add_column(
                         ColumnDef::new(Alias::new("last_used"))
-                        .date_time()
-                        .not_null()
+                            .date_time()
+                            .not_null(),
                     )
-                    .add_column(
-                        ColumnDef::new(Alias::new("location"))
-                        .text()
-                    )
-                    .to_owned()
+                    .add_column(ColumnDef::new(Alias::new("location")).text())
+                    .to_owned(),
             )
             .await
     }
@@ -62,9 +43,7 @@ impl MigrationTrait for Migration {
         // Truncate database because token will now be null
         let db = manager.get_connection();
 
-        db.execute_unprepared(
-            "TRUNCATE session;"
-        ).await?;
+        db.execute_unprepared("TRUNCATE session;").await?;
 
         manager
             .alter_table(
@@ -75,7 +54,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Session::Token)
                             .text()
                             .not_null()
-                            .primary_key()
+                            .primary_key(),
                     )
                     .drop_column(Alias::new("session_id"))
                     .drop_column(Alias::new("status"))
@@ -83,7 +62,8 @@ impl MigrationTrait for Migration {
                     .drop_column(Alias::new("platform"))
                     .drop_column(Alias::new("last_used"))
                     .drop_column(Alias::new("location"))
-                    .to_owned()
-            ).await
+                    .to_owned(),
+            )
+            .await
     }
 }

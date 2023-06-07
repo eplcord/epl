@@ -1,20 +1,21 @@
 extern crate core;
 
-use std::net::SocketAddr;
 use axum::http::Method;
-use axum::{Extension, Router};
 use axum::routing::get;
+use axum::{Extension, Router};
 use axum_client_ip::SecureClientIpSource;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, info, log};
 
-use epl_common::options::{EplOptions, Options};
 use crate::gateway::gateway;
+use epl_common::options::{EplOptions, Options};
 use epl_common::rustflake;
 
 use migration::{Migrator, MigratorTrait};
 
+mod fragmented_write;
 mod gateway;
 mod state;
 
@@ -43,7 +44,8 @@ async fn main() {
 
     info!("Connecting to database");
 
-    let mut migration_db_opt = migration::sea_orm::ConnectOptions::new(options.database_url.clone());
+    let mut migration_db_opt =
+        migration::sea_orm::ConnectOptions::new(options.database_url.clone());
     migration_db_opt.sqlx_logging_level(log::LevelFilter::Debug);
 
     info!("Checking for migrations needed");
@@ -73,12 +75,12 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(gateway))
-
         .layer(cors)
         .layer(Extension(app_state))
         .layer(SecureClientIpSource::RightmostXForwardedFor.into_extension());
 
-    let addr: SocketAddr = options.listen_addr
+    let addr: SocketAddr = options
+        .listen_addr
         .parse()
         .expect("Unable to parse listen address!");
 

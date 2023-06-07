@@ -28,9 +28,18 @@ impl Options for EplOptions {
             database_url: env::var("DATABASE_URL").expect("DATABASE_URL is required!"),
             nats_addr: env::var("NATS_ADDR").unwrap_or_else(|_| "127.0.0.1:4222".to_string()),
             lvsp_secret: env::var("LVSP_SECRET").expect("LVSP_SECRET is required!"),
-            require_ssl: env::var("REQUIRE_SSL").unwrap_or_else(|_| "false".to_string()).parse().unwrap(),
-            registration: env::var("REGISTRATION").unwrap_or_else(|_| "false".to_string()).parse().unwrap(),
-            maxminddb: env::var("MAXMIND_DB_PATH").unwrap_or_else(|_| "GeoLite2-City.mmdb".to_string()).parse().unwrap(),
+            require_ssl: env::var("REQUIRE_SSL")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap(),
+            registration: env::var("REGISTRATION")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap(),
+            maxminddb: env::var("MAXMIND_DB_PATH")
+                .unwrap_or_else(|_| "GeoLite2-City.mmdb".to_string())
+                .parse()
+                .unwrap(),
         }
     }
 }

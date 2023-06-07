@@ -1,9 +1,9 @@
 // User and application flags taken from https://flags.lewisakura.moe/
 
-use std::collections::HashSet;
 use enum_iterator::{all, Sequence};
 use once_cell::sync::Lazy;
 use serde_derive::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 static PUBLIC_FLAGS: Lazy<HashSet<UserFlags>> = Lazy::new(|| {
     let mut set = HashSet::new();
@@ -101,7 +101,7 @@ pub enum UserFlags {
     /// ? Best Guess: Has Staff Permissions
     Collaborator = 1 << 50,
     /// ? Best Guess: Has Staff Permissions
-    RestrictedCollaborator = 1 << 51
+    RestrictedCollaborator = 1 << 51,
 }
 
 #[repr(u64)]
@@ -156,7 +156,7 @@ pub struct Badge {
     icon: String,
     id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    link: Option<String>
+    link: Option<String>,
 }
 
 impl From<UserFlags> for Option<Badge> {
@@ -184,7 +184,10 @@ impl From<UserFlags> for Option<Badge> {
                 description: "Discord Bug Hunter".to_string(),
                 icon: "2717692c7dca7289b35297368a940dd0".to_string(),
                 id: "bug_hunter_level_1".to_string(),
-                link: Some("https://support.discord.com/hc/en-us/articles/360046057772-Discord-Bugs".to_string()),
+                link: Some(
+                    "https://support.discord.com/hc/en-us/articles/360046057772-Discord-Bugs"
+                        .to_string(),
+                ),
             }),
             UserFlags::HypesquadOnlineHouse1 => Some(Badge {
                 description: "HypeSquad Bravery".to_string(),
@@ -214,7 +217,10 @@ impl From<UserFlags> for Option<Badge> {
                 description: "Discord Bug Hunter".to_string(),
                 icon: "848f79194d4be5ff5f81505cbd0ce1e6".to_string(),
                 id: "bug_hunter_level_2".to_string(),
-                link: Some("https://support.discord.com/hc/en-us/articles/360046057772-Discord-Bugs".to_string()),
+                link: Some(
+                    "https://support.discord.com/hc/en-us/articles/360046057772-Discord-Bugs"
+                        .to_string(),
+                ),
             }),
             UserFlags::VerifiedDeveloper => Some(Badge {
                 description: "Early Verified Bot Developer".to_string(),
@@ -232,7 +238,10 @@ impl From<UserFlags> for Option<Badge> {
                 description: "Active Developer".to_string(),
                 icon: "6bdc42827a38498929a4920da12695d9".to_string(),
                 id: "active_developer".to_string(),
-                link: Some("https://support-dev.discord.com/hc/en-us/articles/10113997751447?ref=badge".to_string()),
+                link: Some(
+                    "https://support-dev.discord.com/hc/en-us/articles/10113997751447?ref=badge"
+                        .to_string(),
+                ),
             }),
             _ => None,
         }

@@ -1,23 +1,23 @@
 extern crate core;
 
-use std::net::SocketAddr;
-use axum::http::Method;
-use axum::{Extension, Router};
-use axum::routing::get;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-use tower_http::cors::{Any, CorsLayer};
-use tracing::{debug, info, log};
 use askama::Template;
 use async_nats::Client;
+use axum::http::Method;
+use axum::routing::get;
+use axum::{Extension, Router};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer};
+use tracing::{debug, info, log};
 
-use epl_common::options::{EplOptions, Options};
 use crate::http::api;
+use epl_common::options::{EplOptions, Options};
 use epl_common::rustflake;
 
 use migration::{Migrator, MigratorTrait};
 
-mod http;
 mod authorization_extractor;
+mod http;
 mod nats;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -45,7 +45,8 @@ async fn main() {
 
     info!("Connecting to database");
 
-    let mut migration_db_opt = migration::sea_orm::ConnectOptions::new(options.database_url.clone());
+    let mut migration_db_opt =
+        migration::sea_orm::ConnectOptions::new(options.database_url.clone());
     migration_db_opt.sqlx_logging_level(log::LevelFilter::Debug);
 
     info!("Checking for migrations needed");
@@ -67,27 +68,38 @@ async fn main() {
 
     info!("Connecting to NATS server");
 
-    let client = async_nats::connect(EplOptions::get().nats_addr).await.expect("Failed to connect to NATS server");
+    let client = async_nats::connect(EplOptions::get().nats_addr)
+        .await
+        .expect("Failed to connect to NATS server");
 
     info!("Connected to NATS server");
 
     info!("Starting server");
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS, Method::DELETE, Method::PUT])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::OPTIONS,
+            Method::DELETE,
+            Method::PUT,
+        ])
         .allow_headers(Any);
 
-    let app_state = AppState { conn, nats_client: client };
+    let app_state = AppState {
+        conn,
+        nats_client: client,
+    };
 
     let app = Router::new()
         .nest("/api", api())
-
         .route("/", get(index))
-
         .layer(cors)
         .layer(Extension(app_state));
 
-    let addr: SocketAddr = options.listen_addr
+    let addr: SocketAddr = options
+        .listen_addr
         .parse()
         .expect("Unable to parse listen address!");
 
@@ -100,7 +112,7 @@ async fn main() {
 #[derive(Clone)]
 pub struct AppState {
     conn: DatabaseConnection,
-    nats_client: Client
+    nats_client: Client,
 }
 
 #[derive(Template)]
@@ -115,6 +127,6 @@ async fn index() -> IndexTemplate {
 
     IndexTemplate {
         instance_name: options.name,
-        version: VERSION.to_string()
+        version: VERSION.to_string(),
     }
 }

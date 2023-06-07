@@ -1,27 +1,27 @@
-use axum::{Extension, Json};
+use crate::authorization_extractor::SessionContext;
+use crate::AppState;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use sea_orm::ActiveValue::Set;
-use sea_orm::IntoActiveModel;
-use serde_derive::{Deserialize, Serialize};
+use axum::{Extension, Json};
 use epl_common::database::entities::prelude::{Channel, ChannelMember, User};
 use epl_common::database::entities::{channel, channel_member, user};
 use epl_common::rustflake::Snowflake;
-use crate::AppState;
-use crate::authorization_extractor::SessionContext;
+use sea_orm::ActiveValue::Set;
+use sea_orm::IntoActiveModel;
+use serde_derive::{Deserialize, Serialize};
 
-use sea_orm::prelude::*;
-use serde_with::skip_serializing_none;
+use crate::http::v9::routes::users::relationships::get_relationship;
+use crate::nats::send_nats_message;
 use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::nats::Messages::ChannelCreate;
 use epl_common::RelationshipType;
-use crate::http::v9::routes::users::relationships::get_relationship;
-use crate::nats::send_nats_message;
+use sea_orm::prelude::*;
+use serde_with::skip_serializing_none;
 
 #[derive(Deserialize)]
 pub struct NewDMChannelReq {
-    recipients: Vec<String>
+    recipients: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -37,7 +37,7 @@ pub struct NewDMChannelUser {
     pub global_name: Option<String>,
     pub id: String,
     pub public_flags: i64,
-    pub username: String
+    pub username: String,
 }
 
 #[skip_serializing_none]
@@ -67,38 +67,42 @@ pub async fn new_dm_channel(
 
     // First we ensure the users both exist and are friends with the creator
     for i in &new_channel_dm_req.recipients {
-        let user: Option<user::Model> = User::find_by_id(i.parse::<i64>().expect("User ID is not i64!"))
-            .one(&state.conn)
-            .await
-            .expect("Failed to access database!");
+        let user: Option<user::Model> =
+            User::find_by_id(i.parse::<i64>().expect("User ID is not i64!"))
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!");
 
         match user {
-            None => {
-                return StatusCode::BAD_REQUEST.into_response()
-            }
+            None => return StatusCode::BAD_REQUEST.into_response(),
             Some(user) => {
                 // User exists, now we check if they're actually friends
                 match get_relationship(session_context.user.id, user.id, &state).await {
                     None => {
                         // They're not, bail
-                        return StatusCode::BAD_REQUEST.into_response()
+                        return StatusCode::BAD_REQUEST.into_response();
                     }
                     Some(relationship) => {
                         if relationship.relationship_type != RelationshipType::Friend as i32 {
                             // They're either pending or blocked, bail
-                            return StatusCode::BAD_REQUEST.into_response()
+                            return StatusCode::BAD_REQUEST.into_response();
                         } else {
                             // They're friends, keep going
 
                             // We'll also generate the channel member entries now
-                            channel_members.push(channel_member::Model {
-                                channel: snowflake,
-                                user: user.id
-                            }.into_active_model());
+                            channel_members.push(
+                                channel_member::Model {
+                                    channel: snowflake,
+                                    user: user.id,
+                                }
+                                .into_active_model(),
+                            );
 
                             // And the required NewDMChannelUser for the HTTP response
                             users.push(NewDMChannelUser {
-                                accent_color: user.accent_color.map(|e| e.parse().expect("Failed to parse user's accent_color")),
+                                accent_color: user.accent_color.map(|e| {
+                                    e.parse().expect("Failed to parse user's accent_color")
+                                }),
                                 avatar: user.avatar,
                                 avatar_decoration: user.avatar_decoration,
                                 banner: user.banner,
@@ -119,10 +123,13 @@ pub async fn new_dm_channel(
     }
 
     // Now we do the same as above but for the creator
-    channel_members.push(channel_member::Model {
-        channel: snowflake,
-        user: session_context.user.id
-    }.into_active_model());
+    channel_members.push(
+        channel_member::Model {
+            channel: snowflake,
+            user: session_context.user.id,
+        }
+        .into_active_model(),
+    );
 
     // Calculate if we should insert a DM or group DM
     let mut channel_type = ChannelTypes::DM;
@@ -132,21 +139,20 @@ pub async fn new_dm_channel(
     }
 
     // Now that we've verified that all the users are friends, create the channel
-    Channel::insert(
-        channel::ActiveModel {
-            id: Set(snowflake),
-            r#type: Set(channel_type as i32),
-            owner_id: {
-                match channel_type {
-                    ChannelTypes::GroupDM => Set(Some(session_context.user.id)),
-                    _ => Set(None)
-                }
-            },
-            ..Default::default()
-        }
-    ).exec(&state.conn)
-        .await
-        .expect("Failed to access database!");
+    Channel::insert(channel::ActiveModel {
+        id: Set(snowflake),
+        r#type: Set(channel_type as i32),
+        owner_id: {
+            match channel_type {
+                ChannelTypes::GroupDM => Set(Some(session_context.user.id)),
+                _ => Set(None),
+            }
+        },
+        ..Default::default()
+    })
+    .exec(&state.conn)
+    .await
+    .expect("Failed to access database!");
 
     // Insert the channel member entries now that the channel is made
     ChannelMember::insert_many(channel_members.clone())
@@ -156,22 +162,31 @@ pub async fn new_dm_channel(
 
     // Now we inform everyone about the channel creation
     for i in channel_members {
-        send_nats_message(&state.nats_client, i.user.unwrap().to_string(), ChannelCreate { id: snowflake }).await;
+        send_nats_message(
+            &state.nats_client,
+            i.user.unwrap().to_string(),
+            ChannelCreate { id: snowflake },
+        )
+        .await;
     }
 
-    (StatusCode::OK, Json(NewDMChannelRes {
-        flags: 0,
-        id: snowflake.to_string(),
-        icon: None,
-        last_message_id: None,
-        name: None,
-        owner_id: {
-            match channel_type {
-                ChannelTypes::GroupDM => Some(session_context.user.id.to_string()),
-                _ => None
-            }
-        },
-        recipients: users,
-        _type: channel_type as i32,
-    })).into_response()
+    (
+        StatusCode::OK,
+        Json(NewDMChannelRes {
+            flags: 0,
+            id: snowflake.to_string(),
+            icon: None,
+            last_message_id: None,
+            name: None,
+            owner_id: {
+                match channel_type {
+                    ChannelTypes::GroupDM => Some(session_context.user.id.to_string()),
+                    _ => None,
+                }
+            },
+            recipients: users,
+            _type: channel_type as i32,
+        }),
+    )
+        .into_response()
 }

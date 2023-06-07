@@ -1,6 +1,6 @@
 use crate::gateway::schema::presence::Presence;
-use serde_derive::{Serialize, Deserialize};
 use epl_common::Stub;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Identify {
@@ -9,7 +9,7 @@ pub struct Identify {
     pub properties: Option<Properties>,
     pub presence: Option<Presence>,
     pub compress: Option<bool>,
-    pub client_state: Option<ClientState>
+    pub client_state: Option<ClientState>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -28,7 +28,7 @@ pub struct Properties {
     pub os_version: Option<String>,
     pub release_channel: Option<String>,
     pub system_locale: Option<String>,
-    pub window_manager: Option<String>
+    pub window_manager: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -40,5 +40,5 @@ pub struct ClientState {
     pub read_state_version: Option<i32>,
     pub user_guild_settings_version: Option<i32>,
     pub user_settings_version: Option<i32>,
-    pub guild_hashes: Option<Stub>
+    pub guild_hashes: Option<Stub>,
 }

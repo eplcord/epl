@@ -2,42 +2,41 @@ use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use axum::{
-    extract::ws::Message::{Close, Ping, Pong, Text},
-    extract::ws::{WebSocket, WebSocketUpgrade},
-    response::IntoResponse,
-    Extension,
-};
+use axum::{response::IntoResponse, Extension};
+
+use axum_tungstenite::Message::{Close, Ping, Pong, Text};
+use axum_tungstenite::{WebSocket, WebSocketUpgrade};
+
 use axum::extract::Query;
 use futures::{FutureExt, StreamExt};
 use serde::{de, Deserialize, Deserializer};
 
-use crate::AppState;
-use tracing::{debug, info};
-use epl_common::options::{EplOptions, Options};
 use crate::gateway::dispatch::send_message;
+use crate::AppState;
+use epl_common::options::{EplOptions, Options};
+use tracing::{debug, info};
 
 use crate::gateway::handle::handle_op;
 use crate::gateway::schema::hello::Hello;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::GatewayMessage;
-use crate::state::{GatewayState, EncodingType, CompressionType, ThreadData};
+use crate::state::{CompressionType, EncodingType, GatewayState, ThreadData};
 
+use crate::gateway::nats::handle_nats_message;
 use axum_client_ip::SecureClientIp;
 use epl_common::rustflake::Snowflake;
-use crate::gateway::nats::handle_nats_message;
 
 mod dispatch;
 mod handle;
-mod schema;
 mod nats;
+mod schema;
 
 /// Serde deserialization decorator to map empty Strings to None,
 fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: FromStr,
-        T::Err: fmt::Display,
+where
+    D: Deserializer<'de>,
+    T: FromStr,
+    T::Err: fmt::Display,
 {
     let opt = Option::<String>::deserialize(de)?;
     match opt.as_deref() {
@@ -51,14 +50,14 @@ pub struct Params {
     pub encoding: String,
     pub v: i32,
     #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub compress: Option<String>
+    pub compress: Option<String>,
 }
 
 pub async fn gateway(
     ws: WebSocketUpgrade,
     SecureClientIp(addr): SecureClientIp,
     Extension(state): Extension<AppState>,
-    Query(params): Query<Params>
+    Query(params): Query<Params>,
 ) -> impl IntoResponse {
     info!("{addr} connected!");
 
@@ -67,9 +66,7 @@ pub async fn gateway(
 
 async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, params: Params) {
     // save first message
-    let mut msg_try = {
-        rawsocket.recv().now_or_never()
-    };
+    let mut msg_try = { rawsocket.recv().now_or_never() };
 
     debug!("Connecting to NATS server for new session by {}", &addr);
     let nats = async_nats::connect(EplOptions::get().nats_addr)
@@ -91,8 +88,15 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
         current_shard: None,
         shard_count: None,
         intents: None,
-        compression: params.compress.map(|compression| compression.parse::<CompressionType>().expect("Invalid compression type requested!")),
-        encoding: params.encoding.parse::<EncodingType>().expect("Invalid encoding type requested!"),
+        compression: params.compress.map(|compression| {
+            compression
+                .parse::<CompressionType>()
+                .expect("Invalid compression type requested!")
+        }),
+        encoding: params
+            .encoding
+            .parse::<EncodingType>()
+            .expect("Invalid encoding type requested!"),
     };
 
     let mut thread_data = ThreadData {
@@ -107,14 +111,18 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
     };
 
     // Send HELLO to start gateway communication
-    send_message(&mut thread_data, GatewayMessage {
-        op: OpCodes::Hello,
-        d: Some(GatewayData::Hello(Box::from(Hello {
-            heartbeat_interval: 10000,
-        }))),
-        s: None,
-        t: None,
-    }).await;
+    send_message(
+        &mut thread_data,
+        GatewayMessage {
+            op: OpCodes::Hello,
+            d: Some(GatewayData::Hello(Box::from(Hello {
+                heartbeat_interval: 10000,
+            }))),
+            s: None,
+            t: None,
+        },
+    )
+    .await;
 
     loop {
         // Clippy is being bad here >:(
@@ -149,9 +157,12 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
             }
         }
 
-
         // Ensure all NATS messages are sent
-        thread_data.nats.flush().await.expect("Failed to flush NATS message queue!");
+        thread_data
+            .nats
+            .flush()
+            .await
+            .expect("Failed to flush NATS message queue!");
 
         let mut nats_messages: Vec<async_nats::Message> = vec![];
 
@@ -174,12 +185,9 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
             } else {
                 debug!("huhhh?");
             }
-
         }
 
         // Capture next websocket message
-        msg_try = {
-            thread_data.socket.recv().now_or_never()
-        }
+        msg_try = thread_data.socket.recv().now_or_never()
     }
 }

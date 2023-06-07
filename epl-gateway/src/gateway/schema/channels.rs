@@ -1,7 +1,7 @@
-use serde_derive::{Deserialize, Serialize};
-use serde_with::{skip_serializing_none};
-use epl_common::Stub;
 use crate::gateway::schema::SharedUser;
+use epl_common::Stub;
+use serde_derive::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -23,5 +23,5 @@ pub struct ChannelCreate {
     #[serde(rename = "type")]
     pub _type: i32,
     pub version: Option<i32>,
-    pub is_spam: Option<bool>
+    pub is_spam: Option<bool>,
 }

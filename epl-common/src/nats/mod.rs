@@ -1,5 +1,5 @@
-use serde_derive::{Deserialize, Serialize};
 use crate::RelationshipType;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "t", content = "c")]
@@ -21,20 +21,20 @@ pub enum Messages {
         /// Creator of the request
         user_id: i64,
         /// Relationship type
-        req_type: RelationshipType
+        req_type: RelationshipType,
     },
     /// A friend request was ignored or a friend was removed (sent to peer)
     RelationshipRemove {
         /// Creator of the request
         user_id: i64,
         /// Relationship type
-        req_type: RelationshipType
+        req_type: RelationshipType,
     },
     /// A channel has been created
     ChannelCreate {
         /// ID of the channel created
-        id: i64
-    }
+        id: i64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

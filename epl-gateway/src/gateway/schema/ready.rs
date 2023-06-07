@@ -1,5 +1,5 @@
-use serde_derive::{Deserialize, Serialize};
 use epl_common::Stub;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Ready {
@@ -160,5 +160,5 @@ pub struct PrivateChannel {
     pub id: String,
     pub flags: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub owner_id: Option<String>
+    pub owner_id: Option<String>,
 }

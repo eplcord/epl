@@ -1,12 +1,12 @@
+use crate::gateway::dispatch::DispatchTypes;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use tracing::debug;
-use crate::gateway::dispatch::DispatchTypes;
 
 use crate::gateway::schema::hello::Hello;
 use crate::gateway::schema::identify::Identify;
-use crate::gateway::schema::GatewayMessage;
 use crate::gateway::schema::presence::Presence;
+use crate::gateway::schema::GatewayMessage;
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Default)]
 #[repr(u8)]
@@ -19,7 +19,7 @@ pub enum OpCodes {
     VoiceStateUpdate = 4,
     InvalidSession = 9,
     Hello = 10,
-    HeartbeatAck = 11
+    HeartbeatAck = 11,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

@@ -55,7 +55,9 @@ impl From<APIErrorField> for String {
             APIErrorField::Login { .. } => "login",
             APIErrorField::Email { .. } => "email",
             APIErrorField::DateOfBirth { .. } => "date_of_birth",
-        }.parse().unwrap()
+        }
+        .parse()
+        .unwrap()
     }
 }
 
@@ -72,7 +74,7 @@ pub enum APIErrorCode {
     PasswordDoesNotMatch,
     InvalidFormBody,
     FriendRequestBlocked,
-    CannotSendFriendRequestToSelf
+    CannotSendFriendRequestToSelf,
 }
 
 impl From<APIErrorCode> for u32 {
@@ -83,7 +85,7 @@ impl From<APIErrorCode> for u32 {
             APIErrorCode::PasswordDoesNotMatch => 50018,
             APIErrorCode::InvalidFormBody => 50035,
             APIErrorCode::CannotSendFriendRequestToSelf => 80003,
-            APIErrorCode::FriendRequestBlocked => 80001
+            APIErrorCode::FriendRequestBlocked => 80001,
         }
     }
 }
@@ -95,8 +97,10 @@ impl From<APIErrorCode> for String {
             APIErrorCode::Unauthorized => "Unauthorized".to_string(),
             APIErrorCode::PasswordDoesNotMatch => "Password does not match".to_string(),
             APIErrorCode::InvalidFormBody => "Unknown Form Body".to_string(),
-            APIErrorCode::CannotSendFriendRequestToSelf => "Cannot send friend request to self".to_string(),
-            APIErrorCode::FriendRequestBlocked => "Friend request blocked".to_string()
+            APIErrorCode::CannotSendFriendRequestToSelf => {
+                "Cannot send friend request to self".to_string()
+            }
+            APIErrorCode::FriendRequestBlocked => "Friend request blocked".to_string(),
         }
     }
 }
@@ -109,7 +113,7 @@ impl From<APIErrorCode> for StatusCode {
             APIErrorCode::PasswordDoesNotMatch => StatusCode::BAD_REQUEST,
             APIErrorCode::InvalidFormBody => StatusCode::BAD_REQUEST,
             APIErrorCode::CannotSendFriendRequestToSelf => StatusCode::BAD_REQUEST,
-            APIErrorCode::FriendRequestBlocked => StatusCode::BAD_REQUEST
+            APIErrorCode::FriendRequestBlocked => StatusCode::BAD_REQUEST,
         }
     }
 }

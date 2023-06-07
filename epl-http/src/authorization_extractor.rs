@@ -1,10 +1,10 @@
+use crate::AppState;
 use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::Extension;
 use epl_common::database::auth::{get_session_by_token, get_user_from_session_by_token};
 use epl_common::database::entities::{session, user};
-use crate::AppState;
 
 #[derive(Clone)]
 pub struct SessionContext {
@@ -26,10 +26,7 @@ pub async fn get_session_context<B>(
 
     return if let Ok(session) = get_session_by_token(&state.conn, &String::from(auth)).await {
         if let Ok(user) = get_user_from_session_by_token(&state.conn, &String::from(auth)).await {
-            let context = SessionContext {
-                user,
-                session,
-            };
+            let context = SessionContext { user, session };
 
             request.extensions_mut().insert(context);
 
@@ -39,5 +36,5 @@ pub async fn get_session_context<B>(
         }
     } else {
         Err(StatusCode::UNAUTHORIZED)
-    }
+    };
 }

@@ -1,6 +1,4 @@
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct VoiceState {
-
-}
+pub struct VoiceState {}
