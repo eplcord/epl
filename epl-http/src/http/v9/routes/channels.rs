@@ -41,6 +41,17 @@ pub async fn get_messages(
     match requested_channel {
         None => StatusCode::BAD_REQUEST.into_response(),
         Some(requested_channel) => {
+            // Now check if the user is actually in the channel
+            let is_user_in_channel = ChannelMember::find_by_id((requested_channel.id, session_context.user.id))
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!")
+                .is_some();
+
+            if !is_user_in_channel {
+                return StatusCode::BAD_REQUEST.into_response()
+            }
+
             let mut output = vec![];
 
             let limit = get_message_query.limit.unwrap_or(50);
