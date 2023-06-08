@@ -179,6 +179,14 @@ pub async fn dispatch_ready(
             .expect("Failed to access database!")
             .expect("Channel user is member of is missing!");
 
+        thread_data.nats_subscriptions.push(
+            thread_data
+                .nats
+                .subscribe(format!("{}", channel.id))
+                .await
+                .expect("Failed to subscribe!")
+        );
+
         let recipient_ids: Vec<String> = ChannelMember::find()
             .filter(channel_member::Column::Channel.eq(channel.id))
             .filter(channel_member::Column::User.ne(user.id))

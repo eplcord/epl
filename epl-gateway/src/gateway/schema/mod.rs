@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use epl_common::database::entities::user;
+use epl_common::flags::{generate_public_flags, get_user_flags};
 
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 
@@ -32,4 +34,16 @@ pub struct SharedUser {
     pub id: String,
     pub public_flags: i64,
     pub username: String,
+}
+
+pub fn generated_user_struct(user: user::Model) -> SharedUser {
+    SharedUser {
+        avatar: user.avatar,
+        avatar_decoration: user.avatar_decoration,
+        discriminator: Option::from(user.discriminator),
+        global_name: None,
+        id: user.id.to_string(),
+        public_flags: generate_public_flags(get_user_flags(user.flags)),
+        username: user.username,
+    }
 }

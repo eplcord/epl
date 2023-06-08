@@ -7,7 +7,7 @@ use axum_tungstenite::Message;
 use crate::fragmented_write::two_frame_fragmentaion;
 use crate::gateway::schema::channels::ChannelCreate;
 use crate::gateway::schema::error_codes::ErrorCode;
-use crate::gateway::schema::message::MessageCreate;
+use crate::gateway::schema::message::SharedMessage;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
 use crate::gateway::schema::relationships::{RelationshipAdd, RelationshipRemove};
@@ -34,7 +34,8 @@ pub enum DispatchTypes {
     RelationshipAdd(RelationshipAdd),
     RelationshipRemove(RelationshipRemove),
     ChannelCreate(ChannelCreate),
-    MessageCreate(MessageCreate),
+    MessageCreate(SharedMessage),
+    MessageUpdate(SharedMessage),
 }
 
 impl From<DispatchTypes> for String {
@@ -46,6 +47,7 @@ impl From<DispatchTypes> for String {
             DispatchTypes::RelationshipRemove(_) => String::from("RELATIONSHIP_REMOVE"),
             DispatchTypes::ChannelCreate(_) => String::from("CHANNEL_CREATE"),
             DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE"),
+            DispatchTypes::MessageUpdate(_) => String::from("MESSAGE_UPDATE")
         }
     }
 }

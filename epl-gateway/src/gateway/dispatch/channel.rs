@@ -17,6 +17,14 @@ pub async fn dispatch_channel_create(thread_data: &mut ThreadData, state: &AppSt
         .expect("Failed to access database!")
         .expect("Channel requested by internal NATS missing!");
 
+    thread_data.nats_subscriptions.push(
+        thread_data
+            .nats
+            .subscribe(format!("{}", channel.id))
+            .await
+            .expect("Failed to subscribe!")
+    );
+
     // If this is a DM or group DM, we need to provide the users in recipients
     let recipients: Option<Vec<SharedUser>> = if channel.r#type == (ChannelTypes::DM as i32)
         || channel.r#type == (ChannelTypes::GroupDM as i32)

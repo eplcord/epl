@@ -40,6 +40,11 @@ pub enum Messages {
         /// ID of the message
         id: i64,
     },
+    /// A message has been updated
+    MessageUpdate {
+        /// ID of the message
+        id: i64
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

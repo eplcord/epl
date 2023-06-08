@@ -12,8 +12,7 @@ use sea_orm::{Condition, IntoActiveModel};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::errors::{throw_http_error, APIErrorCode};
-use crate::http::v9::SharedUser;
-use epl_common::flags::{generate_public_flags, get_user_flags};
+use crate::http::v9::{generated_user_struct, SharedUser};
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
 
@@ -59,15 +58,7 @@ pub async fn get_all_relationships(
             nickname: None,
             since: i.timestamp.to_string(),
             _type: i.relationship_type,
-            user: SharedUser {
-                avatar: user.avatar,
-                avatar_decoration: user.avatar_decoration,
-                discriminator: Some(user.discriminator),
-                global_name: None,
-                id: user.id.to_string(),
-                public_flags: generate_public_flags(get_user_flags(user.flags)),
-                username: user.username,
-            },
+            user: generated_user_struct(user),
         })
     }
 
@@ -91,15 +82,7 @@ pub async fn get_all_relationships(
             nickname: None,
             since: i.timestamp.to_string(),
             _type: normalized_type,
-            user: SharedUser {
-                avatar: user.avatar,
-                avatar_decoration: user.avatar_decoration,
-                discriminator: Some(user.discriminator),
-                global_name: None,
-                id: user.id.to_string(),
-                public_flags: generate_public_flags(get_user_flags(user.flags)),
-                username: user.username,
-            },
+            user: generated_user_struct(user),
         })
     }
 

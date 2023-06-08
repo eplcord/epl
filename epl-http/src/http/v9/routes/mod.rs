@@ -8,14 +8,14 @@ use crate::authorization_extractor::get_session_context;
 use crate::http::v9::routes::auth::{
     location_metadata, login, logout, logout_session, register, sessions, verify_email,
 };
-use crate::http::v9::routes::channels::{get_messages, send_message};
+use crate::http::v9::routes::channels::{edit_message, get_messages, send_message};
 use crate::http::v9::routes::hypesquad::{join_hypesquad, leave_hypesquad};
 use crate::http::v9::routes::users::channels::new_dm_channel;
 use crate::http::v9::routes::users::profile;
 use crate::http::v9::routes::users::relationships::{
     delete_relationship, get_all_relationships, modify_relationship, new_relationship,
 };
-use axum::routing::{delete, get, post, put};
+use axum::routing::{delete, get, patch, post, put};
 use axum::{middleware, Router};
 
 pub fn assemble_routes() -> Router {
@@ -54,6 +54,7 @@ pub fn assemble_routes() -> Router {
         .route_layer(middleware::from_fn(get_session_context));
 
     let channels = Router::new()
+        .route("/:id/messages/:id", patch(edit_message))
         .route("/:id/messages", get(get_messages))
         .route("/:id/messages", post(send_message))
         .route_layer(middleware::from_fn(get_session_context));
