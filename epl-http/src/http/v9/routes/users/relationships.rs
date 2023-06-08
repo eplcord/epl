@@ -12,10 +12,10 @@ use sea_orm::{Condition, IntoActiveModel};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::errors::{throw_http_error, APIErrorCode};
+use crate::http::v9::SharedUser;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
-use crate::http::v9::SharedUser;
 
 #[derive(Serialize)]
 pub struct RelationshipRes {

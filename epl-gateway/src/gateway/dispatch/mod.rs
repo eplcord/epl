@@ -7,6 +7,7 @@ use axum_tungstenite::Message;
 use crate::fragmented_write::two_frame_fragmentaion;
 use crate::gateway::schema::channels::ChannelCreate;
 use crate::gateway::schema::error_codes::ErrorCode;
+use crate::gateway::schema::message::MessageCreate;
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
 use crate::gateway::schema::relationships::{RelationshipAdd, RelationshipRemove};
@@ -18,13 +19,12 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use tungstenite::protocol::frame::coding::{CloseCode, Data, OpCode};
 use tungstenite::protocol::frame::{CloseFrame, Frame};
-use crate::gateway::schema::message::MessageCreate;
 
 pub(crate) mod channel;
+pub(crate) mod message;
 pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
-pub(crate) mod message;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
@@ -45,7 +45,7 @@ impl From<DispatchTypes> for String {
             DispatchTypes::RelationshipAdd(_) => String::from("RELATIONSHIP_ADD"),
             DispatchTypes::RelationshipRemove(_) => String::from("RELATIONSHIP_REMOVE"),
             DispatchTypes::ChannelCreate(_) => String::from("CHANNEL_CREATE"),
-            DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE")
+            DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE"),
         }
     }
 }
@@ -132,7 +132,7 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
                                 }
                             };
 
-                            compressed_message.append(&mut vec![0u8, 0u8 , 255, 255]);
+                            compressed_message.append(&mut vec![0u8, 0u8, 255, 255]);
 
                             compressed_message
                         })

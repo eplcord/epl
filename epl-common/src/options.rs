@@ -3,6 +3,7 @@ use std::env;
 // TODO: Make this better lol
 pub struct EplOptions {
     pub name: String,
+    pub description: String,
     pub url: String,
     pub gateway_url: String,
     pub mediaproxy_url: Option<String>,
@@ -21,6 +22,7 @@ impl Options for EplOptions {
     fn get() -> EplOptions {
         EplOptions {
             name: env::var("NAME").unwrap_or_else(|_| "Epl".to_string()),
+            description: env::var("DESCRIPTION").unwrap_or_else(|_| "An Epl instance".to_string()),
             url: env::var("URL").expect("URL is required!"),
             gateway_url: env::var("GATEWAY_URL").expect("GATEWAY_URL is required!"),
             mediaproxy_url: env::var("MEDIAPROXY_URL").ok(),

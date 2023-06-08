@@ -3,17 +3,20 @@ extern crate core;
 use askama::Template;
 use async_nats::Client;
 use axum::http::Method;
+use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Extension, Router};
+use axum::{Extension, Json, Router};
+use epl_common::database::entities::prelude::{Channel, Message, User};
+use epl_common::nodeinfo::{LitecordMetadata, NodeInfo, Services, Software, Usage, UsageUsers};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, PaginatorTrait};
+use serde_derive::Serialize;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, info, log};
-use epl_common::database::entities::prelude::{Channel, Message, User};
 
 use crate::http::api;
 use epl_common::options::{EplOptions, Options};
-use epl_common::rustflake;
+use epl_common::{rustflake, Stub};
 
 use migration::{Migrator, MigratorTrait};
 
@@ -96,6 +99,8 @@ async fn main() {
     let app = Router::new()
         .nest("/api", api())
         .route("/", get(index))
+        .route("/nodeinfo/2.1.json", get(nodeinfo))
+        .route("/.well-known/nodeinfo", get(well_known_nodeinfo))
         .layer(cors)
         .layer(Extension(app_state));
 
@@ -120,6 +125,7 @@ pub struct AppState {
 #[template(path = "index.html")]
 struct IndexTemplate {
     instance_name: String,
+    instance_description: String,
     version: String,
     message_count: u64,
     channel_count: u64,
@@ -127,7 +133,7 @@ struct IndexTemplate {
     guild_count: u64,
 }
 
-async fn index(Extension(state): Extension<AppState>,) -> IndexTemplate {
+async fn index(Extension(state): Extension<AppState>) -> IndexTemplate {
     let options = EplOptions::get();
 
     let message_count = Message::find()
@@ -147,10 +153,83 @@ async fn index(Extension(state): Extension<AppState>,) -> IndexTemplate {
 
     IndexTemplate {
         instance_name: options.name,
+        instance_description: options.description,
         version: VERSION.to_string(),
         message_count,
         channel_count,
         user_count,
         guild_count: 0,
     }
+}
+
+#[derive(Serialize)]
+struct WellKnownNodeInfoRes {
+    links: Vec<WellKnownLink>,
+}
+
+#[derive(Serialize)]
+struct WellKnownLink {
+    rel: String,
+    href: String,
+}
+
+async fn well_known_nodeinfo() -> impl IntoResponse {
+    let options = EplOptions::get();
+
+    Json(WellKnownNodeInfoRes {
+        links: vec![WellKnownLink {
+            rel: "http://nodeinfo.diaspora.software/ns/schema/2.1".to_string(),
+            href: format!(
+                "{}://{}/nodeinfo/2.1.json",
+                if options.require_ssl { "https" } else { "http" },
+                options.url
+            ),
+        }],
+    })
+}
+
+async fn nodeinfo(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    let options = EplOptions::get();
+
+    let user_count = User::find()
+        .count(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let message_count = Message::find()
+        .count(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    Json(NodeInfo {
+        version: "2.1".to_string(),
+        software: Software {
+            name: "Epl".to_string(),
+            version: VERSION.to_string(),
+            repository: Some("https://git.gaycatgirl.sex/epl/epl".to_string()),
+            homepage: None,
+        },
+        protocols: vec![],
+        services: Services {
+            inbound: vec![],
+            outbound: vec![],
+        },
+        open_registrations: options.registration,
+        usage: Usage {
+            users: UsageUsers {
+                total: user_count,
+                active_half_year: None,
+                active_month: None,
+            },
+            local_posts: Some(message_count),
+            local_comments: None,
+        },
+        metadata: LitecordMetadata {
+            node_name: options.name,
+            node_description: options.description,
+            private: false,
+            features: vec!["discord_api".to_string()],
+            federation: Stub {},
+        },
+    })
 }

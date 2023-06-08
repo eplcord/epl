@@ -1,6 +1,6 @@
-use serde_derive::{Deserialize, Serialize};
-use epl_common::Stub;
 use crate::gateway::schema::SharedUser;
+use epl_common::Stub;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MessageReference {

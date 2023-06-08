@@ -1,5 +1,5 @@
-use serde_derive::{Deserialize, Serialize};
 use epl_common::Stub;
+use serde_derive::{Deserialize, Serialize};
 
 pub(crate) mod errors;
 pub(crate) mod routes;

@@ -9,10 +9,11 @@ use std::net::IpAddr;
 pub mod channels;
 pub mod database;
 pub mod flags;
+pub mod messages;
 pub mod nats;
+pub mod nodeinfo;
 pub mod options;
 pub mod rustflake;
-pub mod messages;
 
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")

@@ -38,8 +38,8 @@ pub enum Messages {
     /// A message has been created
     MessageCreate {
         /// ID of the message
-        id: i64
-    }
+        id: i64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

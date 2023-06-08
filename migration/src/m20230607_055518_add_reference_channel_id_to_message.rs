@@ -1,6 +1,6 @@
-use sea_orm_migration::prelude::*;
 use crate::m20230604_223625_create_channel::Channel;
 use crate::m20230604_231009_create_message::Message;
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -12,10 +12,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Message::Table)
-                    .add_column(
-                        ColumnDef::new(Alias::new("reference_channel_id"))
-                            .big_integer()
-                    )
+                    .add_column(ColumnDef::new(Alias::new("reference_channel_id")).big_integer())
                     .add_foreign_key(
                         TableForeignKey::new()
                             .name("fk-message_reference_channel_id-channel_id")
@@ -24,7 +21,7 @@ impl MigrationTrait for Migration {
                             .to_tbl(Channel::Table)
                             .to_col(Channel::Id)
                             .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -38,7 +35,7 @@ impl MigrationTrait for Migration {
                     .table(Message::Table)
                     .drop_column(Alias::new("reference_channel_id"))
                     .drop_foreign_key(Alias::new("fk-message_reference_channel_id-channel_id"))
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }
