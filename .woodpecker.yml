@@ -1,5 +1,0 @@
-pipeline:
-  build:
-    image: rust:1.67-slim
-    commands:
-      - cargo build

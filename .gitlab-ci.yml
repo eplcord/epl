@@ -1,0 +1,21 @@
+image: "rust:latest-slim"
+
+stages:
+  - build
+  - test
+
+cargo-build:
+  stage: build
+  script:
+    - cargo build
+
+cargo-test:
+  stage: test
+  script:
+    - rustc --version && cargo --version
+    - cargo test --workspace --verbose
+
+clippy-lint:
+  stage: test
+  script:
+    - cargo clippy
