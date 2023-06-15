@@ -3,6 +3,7 @@ image: "rust:slim"
 stages:
   - build
   - test
+  - release
 
 cargo-build:
   stage: build
@@ -17,5 +18,17 @@ cargo-test:
 
 clippy-lint:
   stage: test
+  before_script:
+    - rustup component add clippy
   script:
     - cargo clippy
+
+build-release:
+  stage: release
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/epl-gateway
+      - target/release/epl-http
+    expire_in: 1 week
