@@ -1,0 +1,7 @@
+http {
+    reverse_proxy 127.0.0.1:3621
+}
+
+gateway {
+    reverse_proxy 127.0.0.1:3926
+}
