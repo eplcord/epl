@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
+use chrono::Utc;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, User};
 use serde_derive::{Deserialize, Serialize};
 
@@ -13,7 +14,7 @@ use crate::http::v9::{
 use crate::nats::send_nats_message;
 use epl_common::database::entities::{message, user};
 use epl_common::messages::MessageTypes;
-use epl_common::nats::Messages::{MessageCreate, MessageDelete, MessageUpdate};
+use epl_common::nats::Messages::{MessageCreate, MessageDelete, MessageUpdate, TypingStarted};
 use epl_common::rustflake::Snowflake;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
@@ -361,4 +362,32 @@ pub async fn delete_message(
             StatusCode::NO_CONTENT.into_response()
         }
     }
+}
+
+pub async fn typing(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    Path(channel_id): Path<i64>,
+) -> impl IntoResponse {
+    // Does the user have access to this channel?
+    if ChannelMember::find_by_id((channel_id, session_context.user.id))
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .is_none()
+    {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    send_nats_message(
+        &state.nats_client,
+        channel_id.to_string(),
+        TypingStarted {
+            channel_id,
+            user_id: session_context.user.id,
+            timestamp: Utc::now().naive_utc(),
+        }
+    ).await;
+
+    StatusCode::NO_CONTENT.into_response()
 }

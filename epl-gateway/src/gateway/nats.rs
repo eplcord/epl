@@ -9,6 +9,7 @@ use crate::gateway::schema::GatewayMessage;
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::nats::Messages;
+use crate::gateway::dispatch::typing::dispatch_typing_start;
 
 pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, state: &AppState) {
     match msg {
@@ -44,6 +45,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::MessageDelete { id, channel_id, guild_id } => {
             dispatch_message_delete(thread_data, id, channel_id, guild_id).await;
+        }
+        Messages::TypingStarted { channel_id, user_id, timestamp } => {
+            dispatch_typing_start(thread_data, user_id, channel_id, timestamp).await;
         }
     }
 }

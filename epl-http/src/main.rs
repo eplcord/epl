@@ -12,7 +12,6 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection, EntityTrait, Paginat
 use serde_derive::Serialize;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::services::ServeDir;
 use tracing::{debug, info, log};
 
 use crate::http::api;

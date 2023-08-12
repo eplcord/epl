@@ -19,12 +19,14 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use tungstenite::protocol::frame::coding::{CloseCode, Data, OpCode};
 use tungstenite::protocol::frame::{CloseFrame, Frame};
+use crate::gateway::dispatch::typing::TypingStart;
 
 pub(crate) mod channel;
 pub(crate) mod message;
 pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
+pub(crate) mod typing;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
@@ -37,6 +39,7 @@ pub enum DispatchTypes {
     MessageCreate(SharedMessage),
     MessageUpdate(SharedMessage),
     MessageDelete(MessageDelete),
+    TypingStart(TypingStart)
 }
 
 impl From<DispatchTypes> for String {
@@ -50,6 +53,7 @@ impl From<DispatchTypes> for String {
             DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE"),
             DispatchTypes::MessageUpdate(_) => String::from("MESSAGE_UPDATE"),
             DispatchTypes::MessageDelete(_) => String::from("MESSAGE_DELETE"),
+            DispatchTypes::TypingStart(_) => String::from("TYPING_START")
         }
     }
 }

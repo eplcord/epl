@@ -27,7 +27,7 @@ impl Options for EplOptions {
             gateway_url: env::var("GATEWAY_URL").expect("GATEWAY_URL is required!"),
             mediaproxy_url: env::var("MEDIAPROXY_URL").ok(),
             listen_addr: env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3926".to_string()),
-            database_url: env::var("DATABASE_URL").expect("DATABASE_URL is required!"),
+            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://epl:epl@127.0.0.1/epl".to_string()),
             nats_addr: env::var("NATS_ADDR").unwrap_or_else(|_| "127.0.0.1:4222".to_string()),
             lvsp_secret: env::var("LVSP_SECRET").expect("LVSP_SECRET is required!"),
             require_ssl: env::var("REQUIRE_SSL")
@@ -38,10 +38,7 @@ impl Options for EplOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap(),
-            maxminddb: env::var("MAXMIND_DB_PATH")
-                .unwrap_or_else(|_| "GeoLite2-City.mmdb".to_string())
-                .parse()
-                .unwrap(),
+            maxminddb: env::var("MAXMIND_DB_PATH").unwrap_or_else(|_| "GeoLite2-City.mmdb".to_string()),
         }
     }
 }

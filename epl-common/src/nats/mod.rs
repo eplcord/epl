@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use crate::RelationshipType;
 use serde_derive::{Deserialize, Serialize};
 
@@ -54,6 +55,15 @@ pub enum Messages {
         /// ID of the guild that the channel is in
         guild_id: Option<i64>,
     },
+    /// A user has started typing in a channel
+    TypingStarted {
+        /// The channel this is occurring in
+        channel_id: i64,
+        /// The user that is typing
+        user_id: i64,
+        /// The timestamp the user started typing at
+        timestamp: NaiveDateTime
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
