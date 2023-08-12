@@ -1,5 +1,5 @@
 use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
-use crate::gateway::schema::message::{generate_message_struct, generate_refed_message};
+use crate::gateway::schema::message::{generate_message_struct, generate_refed_message, MessageDelete};
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::database::entities::prelude::{Message, User};
@@ -46,4 +46,20 @@ pub async fn dispatch_message(thread_data: &mut ThreadData, state: &AppState, di
         ),
     )
     .await;
+}
+
+
+pub async fn dispatch_message_delete(thread_data: &mut ThreadData, id: i64, channel_id: i64, guild_id: Option<i64>)  {
+    send_message(
+        thread_data,
+        assemble_dispatch(
+            DispatchTypes::MessageDelete(
+                MessageDelete {
+                    channel_id: channel_id.to_string(),
+                    guild_id: guild_id.map(|e| e.to_string()),
+                    id: id.to_string(),
+                }
+            )
+        ),
+    ).await;
 }

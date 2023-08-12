@@ -43,8 +43,17 @@ pub enum Messages {
     /// A message has been updated
     MessageUpdate {
         /// ID of the message
-        id: i64
-    }
+        id: i64,
+    },
+    /// A message was deleted
+    MessageDelete {
+        /// ID of the message
+        id: i64,
+        /// ID of the channel the message was deleted in
+        channel_id: i64,
+        /// ID of the guild that the channel is in
+        guild_id: Option<i64>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

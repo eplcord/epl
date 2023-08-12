@@ -7,6 +7,14 @@ use epl_common::database::entities::{message, user};
 use epl_common::database::entities::prelude::{Message, User};
 
 #[derive(Deserialize, Serialize, Clone)]
+pub struct MessageDelete {
+    pub channel_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guild_id: Option<String>,
+    pub id: String
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub struct MessageReference {
     pub channel_id: String,
     pub message_id: String,

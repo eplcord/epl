@@ -7,7 +7,7 @@ use axum_tungstenite::Message;
 use crate::fragmented_write::two_frame_fragmentaion;
 use crate::gateway::schema::channels::ChannelCreate;
 use crate::gateway::schema::error_codes::ErrorCode;
-use crate::gateway::schema::message::SharedMessage;
+use crate::gateway::schema::message::{MessageDelete, SharedMessage};
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
 use crate::gateway::schema::relationships::{RelationshipAdd, RelationshipRemove};
@@ -36,6 +36,7 @@ pub enum DispatchTypes {
     ChannelCreate(ChannelCreate),
     MessageCreate(SharedMessage),
     MessageUpdate(SharedMessage),
+    MessageDelete(MessageDelete),
 }
 
 impl From<DispatchTypes> for String {
@@ -47,7 +48,8 @@ impl From<DispatchTypes> for String {
             DispatchTypes::RelationshipRemove(_) => String::from("RELATIONSHIP_REMOVE"),
             DispatchTypes::ChannelCreate(_) => String::from("CHANNEL_CREATE"),
             DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE"),
-            DispatchTypes::MessageUpdate(_) => String::from("MESSAGE_UPDATE")
+            DispatchTypes::MessageUpdate(_) => String::from("MESSAGE_UPDATE"),
+            DispatchTypes::MessageDelete(_) => String::from("MESSAGE_DELETE"),
         }
     }
 }
@@ -76,16 +78,12 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
 
     let encoded_message = match thread_data.gateway_state.encoding {
         EncodingType::Json => {
-            debug!("json");
             let message =
                 serde_json::to_string(&message.clone()).expect("Failed to encode message as JSON");
-
-            debug!("{}", message);
 
             message.into_bytes()
         }
         EncodingType::Etf => {
-            debug!("etf");
             serde_eetf::to_bytes(&message.clone()).expect("Failed to encode message as ETF")
         }
     };
@@ -111,9 +109,7 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
                             let compression_type =
                                 thread_data.gateway_state.compression.clone().unwrap();
 
-                            debug!("wegtftr: {:?}", encoded_message);
-
-                            let mut compressed_message = match compression_type {
+                            let compressed_message = match compression_type {
                                 CompressionType::Zlib => {
                                     let mut e =
                                         ZlibEncoder::new(Vec::new(), Compression::default());
@@ -126,15 +122,17 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
                                         ZlibEncoder::new(Vec::new(), Compression::default());
                                     e.write_all(&encoded_message)
                                         .expect("Failed to compress message!");
-                                    e.finish().expect("Failed to compress message!")
+                                    let mut compressed_message =
+                                        e.finish().expect("Failed to compress message!");
+
+                                    compressed_message.extend([0, 0, 0xFF, 0xFF]);
+                                    compressed_message
                                 }
                                 CompressionType::ZstdStreams => {
                                     // TODO: do we uh need this even? no client or bot asks for zstd
                                     todo!()
                                 }
                             };
-
-                            compressed_message.append(&mut vec![0u8, 0u8, 255, 255]);
 
                             compressed_message
                         })
@@ -143,21 +141,6 @@ pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage)
                     .expect("Failed to send message to client");
                 }
                 false => {
-                    // thread_data
-                    //     .socket
-                    //     .send(
-                    //         if thread_data.gateway_state.encoding.eq(&EncodingType::Etf) {
-                    //             Message::Binary(encoded_message)
-                    //         } else {
-                    //             Message::Text(
-                    //                 serde_json::to_string(&message)
-                    //                     .expect("Failed to encode message as JSON"),
-                    //             )
-                    //         },
-                    //     )
-                    //     .await
-                    //     .expect("Failed to send message to client");
-
                     send_fragments(thread_data, {
                         if thread_data.gateway_state.encoding.eq(&EncodingType::Etf) {
                             Message::Binary(encoded_message)

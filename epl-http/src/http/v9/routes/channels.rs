@@ -7,14 +7,16 @@ use axum::{Extension, Json};
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, User};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
+use crate::http::v9::{
+    generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference,
+};
 use crate::nats::send_nats_message;
-use epl_common::database::entities::{channel_member, message, user};
+use epl_common::database::entities::{message, user};
 use epl_common::messages::MessageTypes;
-use epl_common::nats::Messages::{MessageCreate, MessageUpdate};
+use epl_common::nats::Messages::{MessageCreate, MessageDelete, MessageUpdate};
 use epl_common::rustflake::Snowflake;
-use sea_orm::*;
 use sea_orm::ActiveValue::Set;
+use sea_orm::*;
 
 #[derive(Serialize)]
 pub struct GetMessageRes(Vec<SharedMessage>);
@@ -55,26 +57,22 @@ pub async fn get_messages(
             let limit = get_message_query.limit.unwrap_or(50);
 
             let messages: Vec<message::Model> = match get_message_query.before {
-                None => {
-                     Message::find()
-                        .filter(message::Column::ChannelId.eq(requested_channel.id))
-                        .limit(limit as u64)
-                        .order_by_desc(message::Column::Id)
-                        .all(&state.conn)
-                        .await
-                        .expect("Failed to access database!")
-                }
-                Some(before) => {
-                     Message::find()
-                        .filter(message::Column::ChannelId.eq(requested_channel.id))
-                        .limit(limit as u64)
-                        .order_by_desc(message::Column::Id)
-                        .cursor_by(message::Column::Id)
-                        .before(before)
-                        .all(&state.conn)
-                        .await
-                        .expect("Failed to access database!")
-                }
+                None => Message::find()
+                    .filter(message::Column::ChannelId.eq(requested_channel.id))
+                    .limit(limit as u64)
+                    .order_by_desc(message::Column::Id)
+                    .all(&state.conn)
+                    .await
+                    .expect("Failed to access database!"),
+                Some(before) => Message::find()
+                    .filter(message::Column::ChannelId.eq(requested_channel.id))
+                    .limit(limit as u64)
+                    .order_by_desc(message::Column::Id)
+                    .cursor_by(message::Column::Id)
+                    .before(before)
+                    .all(&state.conn)
+                    .await
+                    .expect("Failed to access database!"),
             };
 
             for i in messages {
@@ -86,17 +84,11 @@ pub async fn get_messages(
                 let mut refed_message: Option<(message::Model, Option<user::Model>)> = None;
 
                 if i.reference_message_id.is_some() {
-                    refed_message = generate_refed_message(
-                        &state.conn,
-                        i.reference_message_id.unwrap()
-                    ).await;
+                    refed_message =
+                        generate_refed_message(&state.conn, i.reference_message_id.unwrap()).await;
                 }
 
-                output.push(generate_message_struct(
-                    i.clone(),
-                    author,
-                    refed_message
-                ));
+                output.push(generate_message_struct(i.clone(), author, refed_message));
             }
 
             (StatusCode::OK, Json(GetMessageRes(output))).into_response()
@@ -154,8 +146,14 @@ pub async fn send_message(
             if message.message_reference.is_some() {
                 refed_message = generate_refed_message(
                     &state.conn,
-                    message.message_reference.unwrap().message_id.parse::<i64>().unwrap()
-                ).await;
+                    message
+                        .message_reference
+                        .unwrap()
+                        .message_id
+                        .parse::<i64>()
+                        .unwrap(),
+                )
+                .await;
             }
 
             let new_message = message::Model {
@@ -200,16 +198,18 @@ pub async fn send_message(
                 &state.nats_client,
                 requested_channel.id.to_string(),
                 MessageCreate { id: snowflake },
-            ).await;
+            )
+            .await;
 
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
                     new_message,
                     Some(session_context.user),
-                    refed_message
+                    refed_message,
                 )),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -244,12 +244,11 @@ pub async fn edit_message(
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
-            // Check if the authed user is the author of the message or if the message was created by a webhook
-            if requested_message.author.is_none()
-                || requested_message
-                    .author
-                    .unwrap_or(0)
-                    .ne(&session_context.user.id)
+            // Check if the authed user is the author of the message
+            if requested_message
+                .author
+                .unwrap_or(0)
+                .ne(&session_context.user.id)
             {
                 return StatusCode::BAD_REQUEST.into_response();
             }
@@ -267,16 +266,20 @@ pub async fn edit_message(
             send_nats_message(
                 &state.nats_client,
                 requested_message.channel_id.to_string(),
-                MessageUpdate { id: requested_message.id },
-            ).await;
+                MessageUpdate {
+                    id: requested_message.id,
+                },
+            )
+            .await;
 
             let mut refed_message: Option<(message::Model, Option<user::Model>)> = None;
 
             if requested_message.reference_message_id.is_some() {
                 refed_message = generate_refed_message(
                     &state.conn,
-                    requested_message.reference_message_id.unwrap()
-                ).await;
+                    requested_message.reference_message_id.unwrap(),
+                )
+                .await;
             }
 
             (
@@ -284,9 +287,78 @@ pub async fn edit_message(
                 Json(generate_message_struct(
                     requested_message,
                     Some(session_context.user),
-                    refed_message
-                ))
-            ).into_response()
+                    refed_message,
+                )),
+            )
+                .into_response()
+        }
+    }
+}
+
+pub async fn delete_message(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    Path((_channel_id, message_id)): Path<(i64, i64)>,
+) -> impl IntoResponse {
+    // Ensure message actually exists
+    let requested_message = Message::find_by_id(message_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    match requested_message {
+        None => StatusCode::BAD_REQUEST.into_response(),
+        Some(requested_message) => {
+            // Does the user have access to this channel?
+            if ChannelMember::find_by_id((requested_message.channel_id, session_context.user.id))
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!")
+                .is_none()
+            {
+                return StatusCode::BAD_REQUEST.into_response();
+            }
+
+            let channel = Channel::find_by_id(requested_message.channel_id)
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!")
+                .expect("Message references non-existent channel!");
+
+            // TODO: Guild perms calculation here!
+            let able_to_delete_forced = false;
+
+            // Check if the authed user is the author of the message
+            if requested_message
+                .author
+                .unwrap_or(0)
+                .ne(&session_context.user.id)
+                && !able_to_delete_forced
+            {
+                return StatusCode::BAD_REQUEST.into_response();
+            }
+
+            let cache: (i64, i64, Option<i64>) =
+                (requested_message.id, channel.id, channel.guild_id);
+
+            requested_message
+                .into_active_model()
+                .delete(&state.conn)
+                .await
+                .expect("Failed to access database!");
+
+            send_nats_message(
+                &state.nats_client,
+                cache.1.to_string(),
+                MessageDelete {
+                    id: cache.0,
+                    channel_id: cache.1,
+                    guild_id: cache.2,
+                },
+            )
+            .await;
+
+            StatusCode::NO_CONTENT.into_response()
         }
     }
 }

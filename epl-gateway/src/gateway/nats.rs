@@ -1,5 +1,5 @@
 use crate::gateway::dispatch::channel::dispatch_channel_create;
-use crate::gateway::dispatch::message::{dispatch_message, DispatchMessageTypes};
+use crate::gateway::dispatch::message::{dispatch_message, dispatch_message_delete, DispatchMessageTypes};
 use crate::gateway::dispatch::relationships::{
     dispatch_relationship_add, dispatch_relationship_remove,
 };
@@ -41,6 +41,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::MessageUpdate { id } => {
             dispatch_message(thread_data, state, DispatchMessageTypes::Update, id).await;
+        }
+        Messages::MessageDelete { id, channel_id, guild_id } => {
+            dispatch_message_delete(thread_data, id, channel_id, guild_id).await;
         }
     }
 }
