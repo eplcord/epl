@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use chrono::Utc;
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, User};
+use epl_common::database::entities::prelude::{Channel, Message, User};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::{
@@ -18,6 +18,7 @@ use epl_common::nats::Messages::{MessageCreate, MessageDelete, MessageUpdate, Ty
 use epl_common::rustflake::Snowflake;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
+use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
 
 #[derive(Serialize)]
 pub struct GetMessageRes(Vec<SharedMessage>);
@@ -43,13 +44,16 @@ pub async fn get_messages(
     match requested_channel {
         None => StatusCode::BAD_REQUEST.into_response(),
         Some(requested_channel) => {
-            // Does the user have access to this channel?
-            if ChannelMember::find_by_id((requested_channel.id, session_context.user.id))
-                .one(&state.conn)
-                .await
-                .expect("Failed to access database!")
-                .is_none()
-            {
+            let calculated_permissions = internal_permission_calculator(
+                &requested_channel,
+                &session_context.user,
+                None,
+                &state.conn
+            ).await;
+
+            // Check if the user has permission to view message history (this is just a guess on what is returned)
+            // TODO: Investigate what status code is actually returned for this
+            if !calculated_permissions.contains(&InternalChannelPermissions::ViewHistory) {
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
@@ -130,17 +134,17 @@ pub async fn send_message(
         Some(requested_channel) => {
             let snowflake = Snowflake::default().generate();
 
-            // Does the user have access to this channel?
-            if ChannelMember::find_by_id((requested_channel.id, session_context.user.id))
-                .one(&state.conn)
-                .await
-                .expect("Failed to access database!")
-                .is_none()
-            {
+            let calculated_permissions = internal_permission_calculator(
+                &requested_channel,
+                &session_context.user,
+                None,
+                &state.conn
+            ).await;
+
+            // Check if the user has permission to send messages
+            if !calculated_permissions.contains(&InternalChannelPermissions::SendMessage) {
                 return StatusCode::BAD_REQUEST.into_response();
             }
-
-            // TODO: Guild permission checks
 
             let mut refed_message: Option<(message::Model, Option<user::Model>)> = None;
 
@@ -235,22 +239,20 @@ pub async fn edit_message(
     match requested_message {
         None => StatusCode::BAD_REQUEST.into_response(),
         Some(requested_message) => {
-            // Does the user have access to this channel?
-            if ChannelMember::find_by_id((requested_message.channel_id, session_context.user.id))
-                .one(&state.conn)
-                .await
-                .expect("Failed to access database!")
-                .is_none()
-            {
-                return StatusCode::BAD_REQUEST.into_response();
-            }
+            // Calculate permissions
+            let calculated_permissions = internal_permission_calculator(
+                &Channel::find_by_id(requested_message.channel_id)
+                    .one(&state.conn)
+                    .await
+                    .expect("Failed to access database!")
+                    .expect("Message references non-existent channel!"),
+                &session_context.user,
+                Some(&requested_message),
+                &state.conn
+            ).await;
 
-            // Check if the authed user is the author of the message
-            if requested_message
-                .author
-                .unwrap_or(0)
-                .ne(&session_context.user.id)
-            {
+            // Check if the user has permission to edit the message
+            if !calculated_permissions.contains(&InternalChannelPermissions::EditMessage) {
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
@@ -310,32 +312,22 @@ pub async fn delete_message(
     match requested_message {
         None => StatusCode::BAD_REQUEST.into_response(),
         Some(requested_message) => {
-            // Does the user have access to this channel?
-            if ChannelMember::find_by_id((requested_message.channel_id, session_context.user.id))
-                .one(&state.conn)
-                .await
-                .expect("Failed to access database!")
-                .is_none()
-            {
-                return StatusCode::BAD_REQUEST.into_response();
-            }
-
             let channel = Channel::find_by_id(requested_message.channel_id)
                 .one(&state.conn)
                 .await
                 .expect("Failed to access database!")
                 .expect("Message references non-existent channel!");
 
-            // TODO: Guild perms calculation here!
-            let able_to_delete_forced = false;
+            // Calculate permissions
+            let calculated_permissions = internal_permission_calculator(
+                &channel,
+                &session_context.user,
+                Some(&requested_message),
+                &state.conn
+            ).await;
 
-            // Check if the authed user is the author of the message
-            if requested_message
-                .author
-                .unwrap_or(0)
-                .ne(&session_context.user.id)
-                && !able_to_delete_forced
-            {
+            // Check if the user has permission to delete the message
+            if !calculated_permissions.contains(&InternalChannelPermissions::DeleteMessage) {
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
@@ -369,25 +361,41 @@ pub async fn typing(
     Extension(session_context): Extension<SessionContext>,
     Path(channel_id): Path<i64>,
 ) -> impl IntoResponse {
-    // Does the user have access to this channel?
-    if ChannelMember::find_by_id((channel_id, session_context.user.id))
+    // Ensure channel actually exists
+    let requested_channel = Channel::find_by_id(channel_id)
         .one(&state.conn)
         .await
-        .expect("Failed to access database!")
-        .is_none()
-    {
-        return StatusCode::BAD_REQUEST.into_response();
-    }
+        .expect("Failed to access database!");
 
-    send_nats_message(
-        &state.nats_client,
-        channel_id.to_string(),
-        TypingStarted {
-            channel_id,
-            user_id: session_context.user.id,
-            timestamp: Utc::now().naive_utc(),
+    match requested_channel {
+        None => {
+            StatusCode::BAD_REQUEST.into_response()
         }
-    ).await;
+        Some(requested_channel) => {
+            // Calculate permissions
+            let calculated_permissions = internal_permission_calculator(
+                &requested_channel,
+                &session_context.user,
+                None,
+                &state.conn
+            ).await;
 
-    StatusCode::NO_CONTENT.into_response()
+            // Check if the user has permission to send messages (and actually trigger the typing event)
+            if !calculated_permissions.contains(&InternalChannelPermissions::SendMessage) {
+                return StatusCode::BAD_REQUEST.into_response();
+            }
+
+            send_nats_message(
+                &state.nats_client,
+                channel_id.to_string(),
+                TypingStarted {
+                    channel_id,
+                    user_id: session_context.user.id,
+                    timestamp: Utc::now().naive_utc(),
+                }
+            ).await;
+
+            StatusCode::NO_CONTENT.into_response()
+        }
+    }
 }

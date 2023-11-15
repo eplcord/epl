@@ -1,6 +1,7 @@
+use num_derive::FromPrimitive;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, FromPrimitive)]
 #[repr(i32)]
 pub enum ChannelTypes {
     GuildText = 0,
