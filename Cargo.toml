@@ -4,5 +4,6 @@ members = [
     "epl-http",
     "epl-gateway",
     "epl-common",
-    "migration"
+    "migration",
+    "serde_eetf"
 ]

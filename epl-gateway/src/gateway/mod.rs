@@ -18,12 +18,13 @@ use tracing::{debug, info};
 
 use crate::gateway::handle::handle_op;
 use crate::gateway::schema::hello::Hello;
-use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
+use crate::gateway::schema::opcodes::{GatewayData, handle_etf, handle_json, OpCodes};
 use crate::gateway::schema::GatewayMessage;
 use crate::state::{CompressionType, EncodingType, GatewayState, ThreadData};
 
 use crate::gateway::nats::handle_nats_message;
 use axum_client_ip::SecureClientIp;
+use tungstenite::Message::Binary;
 use epl_common::rustflake::Snowflake;
 
 mod dispatch;
@@ -133,7 +134,10 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
                 if let Ok(msg) = msg {
                     match msg {
                         Text(msg) => {
-                            handle_op(&mut thread_data, msg, &state).await;
+                            handle_op(&mut thread_data, handle_json(msg), &state).await;
+                        },
+                        Binary(msg) => {
+                            handle_op(&mut thread_data, handle_etf(msg), &state).await;
                         }
                         Close(_msg) => {
                             info!("bye bye {addr}");

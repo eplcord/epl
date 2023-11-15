@@ -3,7 +3,7 @@ mod identify;
 use tracing::debug;
 
 use crate::gateway::handle::identify::handle_identify;
-use crate::gateway::schema::opcodes::{get_opcode, GatewayData, OpCodes};
+use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 
 use crate::gateway::dispatch::{send_close, send_message};
 use crate::gateway::schema::error_codes::ErrorCode::DecodeError;
@@ -11,8 +11,7 @@ use crate::gateway::schema::GatewayMessage;
 use crate::state::ThreadData;
 use crate::AppState;
 
-pub async fn handle_op(thread_data: &mut ThreadData, msg: String, state: &AppState) {
-    let op = get_opcode(msg.clone());
+pub async fn handle_op(thread_data: &mut ThreadData, op: Result<(OpCodes, GatewayData), ()>, state: &AppState) {
     if op.is_ok() {
         let op = op.unwrap();
 

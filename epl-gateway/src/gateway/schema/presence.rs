@@ -1,6 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Presence {
     status: Option<String>,
     since: Option<i32>,
@@ -9,7 +9,7 @@ pub struct Presence {
     afk: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ClientStatus {
     #[serde(rename = "desktop")]
     Desktop(String),
@@ -19,5 +19,5 @@ pub enum ClientStatus {
     Web(String),
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Activity {}

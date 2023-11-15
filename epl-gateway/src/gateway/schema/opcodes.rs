@@ -35,14 +35,32 @@ pub enum GatewayData {
     Hello(Box<Hello>),
 }
 
-pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
+pub fn handle_json(msg: String) -> Result<(OpCodes, GatewayData), ()> {
     debug!("Decoding message: {}", &msg);
-    let message_json: Result<GatewayMessage, serde_json::Error> = serde_json::from_str(&msg);
+    let message: Result<GatewayMessage, serde_json::Error> = serde_json::from_str(&msg);
 
-    if let Ok(..) = message_json {
-        let output = message_json.unwrap();
+    if let Ok(..) = message {
+        let output = message.unwrap();
 
         debug!("Decoded as Op: {:?}", &output.op);
+
+        Ok((output.op, output.d.unwrap()))
+    } else {
+        Err(())
+    }
+}
+
+pub fn handle_etf(msg: Vec<u8>) -> Result<(OpCodes, GatewayData), ()> {
+    debug!("Decoding message: {:?}", &msg);
+
+    let message: Result<GatewayMessage, _> = serde_eetf::from_bytes(&msg);
+
+
+    if let Ok(..) = message {
+        let output = message.unwrap();
+
+        debug!("Decoded as Op: {:?}", &output.op);
+        debug!("Payload data exists: {:?}", &output.d.is_some());
 
         Ok((output.op, output.d.unwrap()))
     } else {
