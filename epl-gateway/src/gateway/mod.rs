@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -74,7 +75,7 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
         .expect("Failed to connect to the NATS server");
 
     // Prepare subscriptions vec
-    let nats_subscriptions = vec![];
+    let nats_subscriptions = HashMap::new();
 
     debug!("Connected to NATS server");
 
@@ -170,7 +171,7 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
             // Clippy is being bad here >:( again :(
             // We can't collapse two if lets here as that is still unstable
             #[allow(clippy::collapsible_match)]
-            if let Some(message) = i.next().now_or_never() {
+            if let Some(message) = i.1.next().now_or_never() {
                 if let Some(message) = message {
                     debug!("Received NATS message: {:?}", &message);
 

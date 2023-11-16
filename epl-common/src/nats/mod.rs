@@ -36,6 +36,11 @@ pub enum Messages {
         /// ID of the channel created
         id: i64,
     },
+    /// A channel has been deleted
+    ChannelDelete {
+        /// ID of the channel deleted
+        id: i64,
+    },
     /// A message has been created
     MessageCreate {
         /// ID of the message
@@ -63,7 +68,21 @@ pub enum Messages {
         user_id: i64,
         /// The timestamp the user started typing at
         timestamp: NaiveDateTime
-    }
+    },
+    /// A user has been added to a channel
+    ChannelRecipientAdd {
+        /// The channel this is occurring in
+        channel_id: i64,
+        /// The user that is being added
+        user_id: i64,
+    },
+    /// A user has been removed from a channel
+    ChannelRecipientRemove {
+        /// The channel this is occurring in
+        channel_id: i64,
+        /// The user that is being removed
+        user_id: i64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

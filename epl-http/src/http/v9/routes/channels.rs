@@ -5,20 +5,23 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use chrono::Utc;
-use epl_common::database::entities::prelude::{Channel, Message, User};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, User};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::{
     generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference,
 };
 use crate::nats::send_nats_message;
-use epl_common::database::entities::{message, user};
+use epl_common::database::entities::{channel_member, message, user};
 use epl_common::messages::MessageTypes;
-use epl_common::nats::Messages::{MessageCreate, MessageDelete, MessageUpdate, TypingStarted};
+use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, TypingStarted};
 use epl_common::rustflake::Snowflake;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
+use epl_common::channels::ChannelTypes;
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
+use epl_common::relationship::get_relationship;
+use epl_common::RelationshipType;
 
 #[derive(Serialize)]
 pub struct GetMessageRes(Vec<SharedMessage>);
@@ -396,6 +399,253 @@ pub async fn typing(
             ).await;
 
             StatusCode::NO_CONTENT.into_response()
+        }
+    }
+}
+
+pub async fn add_user_to_channel(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    Path((channel_id, user_id)): Path<(i64, i64)>,
+) -> impl IntoResponse {
+    // Ensure channel actually exists
+    let requested_channel = Channel::find_by_id(channel_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    match requested_channel {
+        None => StatusCode::BAD_REQUEST.into_response(),
+        Some(requested_channel) => {
+            // Calculate permissions
+            let calculated_permissions = internal_permission_calculator(
+                &requested_channel,
+                &session_context.user,
+                None,
+                &state.conn
+            ).await;
+
+            // Check if the user has permission to add users to the channel
+            if !calculated_permissions.contains(&InternalChannelPermissions::AddMembers) {
+                return StatusCode::BAD_REQUEST.into_response();
+            }
+
+            let requested_user = User::find_by_id(user_id)
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!");
+
+            match requested_user {
+                None => StatusCode::BAD_REQUEST.into_response(),
+                Some(requested_user) => {
+                    // Check if the user is already a member of the channel
+                    let channel_member = ChannelMember::find_by_id((requested_channel.id, requested_user.id))
+                        .one(&state.conn)
+                        .await
+                        .expect("Failed to access database!");
+
+                    if channel_member.is_some() {
+                        // User is already a member of the channel
+                        StatusCode::BAD_REQUEST.into_response()
+                    } else {
+                        // If this is a group DM, check if the max number of users has been reached
+                        // and also check if the users are friends
+                        if requested_channel.r#type == (ChannelTypes::GroupDM as i32) {
+                            let channel_members = ChannelMember::find()
+                                .filter(channel_member::Column::Channel.eq(requested_channel.id))
+                                .count(&state.conn)
+                                .await
+                                .expect("Failed to access database!");
+
+                            if channel_members >= 10 {
+                                // Max number of users has been reached
+                                return StatusCode::BAD_REQUEST.into_response();
+                            }
+
+                            let relationship = get_relationship(session_context.user.id, requested_user.id, &state.conn).await;
+
+                            if relationship.is_none() || relationship.unwrap().relationship_type != RelationshipType::Friend as i32 {
+                                // Users are not friends
+                                return StatusCode::BAD_REQUEST.into_response();
+                            }
+                        }
+
+                        // Add the user to the channel
+                        ChannelMember::insert(
+                            channel_member::ActiveModel {
+                                channel: Set(requested_channel.id),
+                                user: Set(requested_user.id),
+                            }
+                        )
+                            .exec(&state.conn)
+                            .await
+                            .expect("Failed to access database!");
+
+                        send_nats_message(
+                            &state.nats_client,
+                            requested_user.id.to_string(),
+                            ChannelCreate { id: requested_channel.id }
+                        ).await;
+
+                        send_nats_message(
+                            &state.nats_client,
+                            requested_channel.id.to_string(),
+                            ChannelRecipientAdd {
+                                channel_id: requested_channel.id,
+                                user_id: requested_user.id,
+                            }
+                        ).await;
+
+                        // Create the arrival message
+                        let snowflake = Snowflake::default().generate();
+
+                        let new_message = message::Model {
+                            id: snowflake,
+                            channel_id: requested_channel.id,
+                            author: Some(session_context.user.id),
+                            content: String::new(),
+                            timestamp: chrono::Utc::now().naive_utc(),
+                            edited_timestamp: None,
+                            tts: false,
+                            mention_everyone: false,
+                            nonce: None,
+                            r#type: MessageTypes::RecipientAdd as i32,
+                            flags: None,
+                            reference_message_id: None,
+                            reference_channel_id: None,
+                            pinned: false,
+                            webhook_id: None,
+                            application_id: None,
+                        };
+
+                        Message::insert(new_message.clone().into_active_model())
+                            .exec(&state.conn)
+                            .await
+                            .expect("Failed to access database!");
+
+                        // TODO: Attach mention to message
+
+                        send_nats_message(
+                            &state.nats_client,
+                            requested_channel.id.to_string(),
+                            MessageCreate { id: snowflake },
+                        )
+                            .await;
+
+                        StatusCode::NO_CONTENT.into_response()
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub async fn remove_user_from_channel(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    Path((channel_id, user_id)): Path<(i64, i64)>,
+) -> impl IntoResponse {
+    // Ensure channel actually exists
+    let requested_channel = Channel::find_by_id(channel_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    match requested_channel {
+        None => StatusCode::BAD_REQUEST.into_response(),
+        Some(requested_channel) => {
+            // Calculate permissions
+            let calculated_permissions = internal_permission_calculator(
+                &requested_channel,
+                &session_context.user,
+                None,
+                &state.conn
+            ).await;
+
+            // Check if the user has permission to remove users from the channel
+            if !calculated_permissions.contains(&InternalChannelPermissions::KickMembers) {
+                return StatusCode::BAD_REQUEST.into_response();
+            }
+
+            let requested_user = User::find_by_id(user_id)
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!");
+
+            match requested_user {
+                None => StatusCode::BAD_REQUEST.into_response(),
+                Some(requested_user) => {
+                    // Check if the user is a member of the channel
+                    let channel_member = ChannelMember::find_by_id((requested_channel.id, requested_user.id))
+                        .one(&state.conn)
+                        .await
+                        .expect("Failed to access database!");
+
+                    if channel_member.is_none() {
+                        // User is not a member of the channel
+                        StatusCode::BAD_REQUEST.into_response()
+                    } else {
+                        // Remove the user from the channel
+                        ChannelMember::delete(channel_member.unwrap().into_active_model())
+                            .exec(&state.conn)
+                            .await
+                            .expect("Failed to access database!");
+
+                        send_nats_message(
+                            &state.nats_client,
+                            requested_user.id.to_string(),
+                            ChannelDelete { id: requested_channel.id }
+                        ).await;
+
+                        send_nats_message(
+                            &state.nats_client,
+                            requested_channel.id.to_string(),
+                            ChannelRecipientRemove {
+                                channel_id: requested_channel.id,
+                                user_id: requested_user.id,
+                            }
+                        ).await;
+
+                        // Create the removal message
+                        let snowflake = Snowflake::default().generate();
+
+                        let new_message = message::Model {
+                            id: snowflake,
+                            channel_id: requested_channel.id,
+                            author: Some(session_context.user.id),
+                            content: String::new(),
+                            timestamp: chrono::Utc::now().naive_utc(),
+                            edited_timestamp: None,
+                            tts: false,
+                            mention_everyone: false,
+                            nonce: None,
+                            r#type: MessageTypes::RecipientRemove as i32,
+                            flags: None,
+                            reference_message_id: None,
+                            reference_channel_id: None,
+                            pinned: false,
+                            webhook_id: None,
+                            application_id: None,
+                        };
+
+                        Message::insert(new_message.clone().into_active_model())
+                            .exec(&state.conn)
+                            .await
+                            .expect("Failed to access database!");
+
+                        // TODO: Attach mention of the user being removed
+
+                        send_nats_message(
+                            &state.nats_client,
+                            requested_channel.id.to_string(),
+                            MessageCreate { id: snowflake },
+                        )
+                            .await;
+
+                        StatusCode::NO_CONTENT.into_response()
+                    }
+                }
+            }
         }
     }
 }

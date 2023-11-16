@@ -79,7 +79,8 @@ pub async fn handle_identify(thread_data: &mut ThreadData, data: Identify, state
     };
     thread_data.gateway_state = gateway_state;
 
-    thread_data.nats_subscriptions.push(
+    thread_data.nats_subscriptions.insert(
+        format!("{}", thread_data.gateway_state.user_id.unwrap()),
         thread_data
             .nats
             .subscribe(format!("{}", thread_data.gateway_state.user_id.unwrap()))

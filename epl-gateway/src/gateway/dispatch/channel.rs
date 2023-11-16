@@ -1,10 +1,10 @@
 use crate::state::ThreadData;
 use crate::AppState;
-use epl_common::database::entities::{channel, channel_member};
+use epl_common::database::entities::{channel, channel_member, user};
 
 use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
-use crate::gateway::schema::channels::ChannelCreate;
-use crate::gateway::schema::SharedUser;
+use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove};
+use crate::gateway::schema::{generated_user_struct, SharedUser};
 use epl_common::channels::ChannelTypes;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, User};
 use epl_common::flags::{generate_public_flags, get_user_flags};
@@ -17,7 +17,8 @@ pub async fn dispatch_channel_create(thread_data: &mut ThreadData, state: &AppSt
         .expect("Failed to access database!")
         .expect("Channel requested by internal NATS missing!");
 
-    thread_data.nats_subscriptions.push(
+    thread_data.nats_subscriptions.insert(
+        format!("{}", channel.id),
         thread_data
             .nats
             .subscribe(format!("{}", channel.id))
@@ -73,12 +74,14 @@ pub async fn dispatch_channel_create(thread_data: &mut ThreadData, state: &AppSt
             id: channel.id.to_string(),
             last_message_id: channel.last_message_id.map(|e| e.to_string()),
             name: channel.name,
+            icon: None,
             nsfw: channel.nsfw,
             parent_id: channel.parent_id.map(|e| e.to_string()),
             permission_overwrites: None,
             position: channel.position,
             rate_limit_per_user: channel.rate_limit_per_user,
             topic: channel.topic,
+            owner_id: channel.owner_id.map(|e| e.to_string()),
             recipients,
             _type: channel.r#type,
             version: None,
@@ -86,4 +89,80 @@ pub async fn dispatch_channel_create(thread_data: &mut ThreadData, state: &AppSt
         })),
     )
     .await;
+}
+
+
+pub async fn dispatch_channel_delete(thread_data: &mut ThreadData, state: &AppState, id: i64) {
+    let channel: channel::Model = Channel::find_by_id(id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .expect("Channel requested by internal NATS missing!");
+
+    thread_data.nats_subscriptions.remove(&format!("{}", channel.id))
+        .unwrap()
+        .unsubscribe()
+        .await
+        .expect("Failed to unsubscribe!");
+
+    send_message(
+        thread_data,
+        assemble_dispatch(DispatchTypes::ChannelDelete(ChannelDelete {
+            flags: channel.flags.unwrap_or(0),
+            guild_id: channel.guild_id.map(|e| e.to_string()),
+            id: channel.id.to_string(),
+            last_message_id: channel.last_message_id.map(|e| e.to_string()),
+            name: channel.name,
+            icon: None,
+            owner_id: channel.owner_id.map(|e| e.to_string()),
+            _type: channel.r#type,
+        })),
+    )
+    .await;
+}
+
+pub enum ChannelRecipientUpdateType {
+    Add,
+    Remove,
+}
+pub async fn dispatch_channel_recipient_update(
+    thread_data: &mut ThreadData,
+    state: &AppState,
+    channel_id: i64,
+    user_id: i64,
+    update_type: ChannelRecipientUpdateType,
+) {
+    let channel: channel::Model = Channel::find_by_id(channel_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .expect("Channel requested by internal NATS missing!");
+
+    let user: user::Model = User::find_by_id(user_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .expect("User requested by internal NATS missing!");
+
+    send_message(
+        thread_data,
+        match update_type {
+            ChannelRecipientUpdateType::Add => {
+                assemble_dispatch(DispatchTypes::ChannelRecipientAdd(
+                    ChannelRecipientAdd {
+                        channel_id: channel.id.to_string(),
+                        user: generated_user_struct(user),
+                    },
+                ))
+            },
+            ChannelRecipientUpdateType::Remove => {
+                assemble_dispatch(DispatchTypes::ChannelRecipientRemove(
+                    ChannelRecipientRemove {
+                        channel_id: channel.id.to_string(),
+                        user: generated_user_struct(user),
+                    },
+                ))
+            }
+        }
+    ).await;
 }

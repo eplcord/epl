@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use async_nats::Subscriber;
 use axum_tungstenite::WebSocket;
 use epl_common::rustflake::Snowflake;
@@ -66,7 +67,7 @@ pub struct ThreadData {
     pub gateway_state: GatewayState,
     pub socket: WebSocket,
     pub nats: async_nats::Client,
-    pub nats_subscriptions: Vec<Subscriber>,
+    pub nats_subscriptions: HashMap<String, Subscriber>,
     pub session_ip: IpAddr,
     pub snowflake_factory: Snowflake,
 }

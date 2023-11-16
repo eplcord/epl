@@ -10,7 +10,6 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::IntoActiveModel;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::http::v9::routes::users::relationships::get_relationship;
 use crate::nats::send_nats_message;
 use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
@@ -18,6 +17,7 @@ use epl_common::nats::Messages::ChannelCreate;
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
 use serde_with::skip_serializing_none;
+use epl_common::relationship::get_relationship;
 
 #[derive(Deserialize)]
 pub struct NewDMChannelReq {
@@ -77,7 +77,7 @@ pub async fn new_dm_channel(
             None => return StatusCode::BAD_REQUEST.into_response(),
             Some(user) => {
                 // User exists, now we check if they're actually friends
-                match get_relationship(session_context.user.id, user.id, &state).await {
+                match get_relationship(session_context.user.id, user.id, &state.conn).await {
                     None => {
                         // They're not, bail
                         return StatusCode::BAD_REQUEST.into_response();

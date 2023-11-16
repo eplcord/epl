@@ -3,8 +3,9 @@ use num_traits::FromPrimitive;
 use once_cell::sync::Lazy;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use crate::channels::ChannelTypes;
-use crate::database::entities::{channel, channel_member, message, relationship, user};
+use crate::database::entities::{channel, channel_member, message, user};
 use crate::database::entities::prelude::*;
+use crate::relationship::get_relationship;
 use crate::RelationshipType;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -53,6 +54,7 @@ pub enum InternalChannelPermissions {
     EditPermissionOverwrites,
 
     // Member management permissions
+    AddMembers,
     KickMembers,
     BanMembers,
     EditMemberRoles,
@@ -89,11 +91,13 @@ static GROUP_DM_ADDITIONS: Lazy<HashSet<InternalChannelPermissions>> = Lazy::new
 
     // Group DM permissions
     permissions.insert(InternalChannelPermissions::EditIcon);
+    permissions.insert(InternalChannelPermissions::CreateInvite);
 
     // DM permissions
     permissions.insert(InternalChannelPermissions::StartCall);
 
     // Channel management permissions
+    permissions.insert(InternalChannelPermissions::AddMembers);
     permissions.insert(InternalChannelPermissions::EditName);
     permissions.insert(InternalChannelPermissions::EditTopic);
 
@@ -138,21 +142,7 @@ pub async fn internal_permission_calculator(
 
             let relationship = match channel_member {
                 Some(channel_member) => {
-                    // TODO: Investigate more SQL ways to do this
-                    // Litecord also does this so :) blueprints/relationships.py#373
-                    let relationship = Relationship::find_by_id((channel_member.user, user.id))
-                        .one(conn)
-                        .await
-                        .expect("Failed to get relationship");
-
-                    if relationship.is_some() {
-                        relationship
-                    } else {
-                        Relationship::find_by_id((user.id, channel_member.user))
-                            .one(conn)
-                            .await
-                            .expect("Failed to get relationship")
-                    }
+                    get_relationship(user.id, channel_member.user, conn).await
                 }
                 None => None
             };

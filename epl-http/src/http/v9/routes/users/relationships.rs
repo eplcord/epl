@@ -8,13 +8,14 @@ use axum::{Extension, Json};
 use epl_common::database::entities::prelude::{Relationship, User};
 use epl_common::database::entities::{relationship, user};
 use sea_orm::ActiveValue::Set;
-use sea_orm::{Condition, IntoActiveModel};
+use sea_orm::IntoActiveModel;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::errors::{throw_http_error, APIErrorCode};
 use crate::http::v9::{generated_user_struct, SharedUser};
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
+use epl_common::relationship::get_relationship;
 
 #[derive(Serialize)]
 pub struct RelationshipRes {
@@ -134,7 +135,7 @@ pub async fn new_relationship(
 
             // Check if a relationship already exists
             let relationship_model =
-                get_relationship(session_context.user.id, user.id, &state).await;
+                get_relationship(session_context.user.id, user.id, &state.conn).await;
 
             if relationship_model.is_some() {
                 return (
@@ -172,35 +173,13 @@ pub async fn new_relationship(
     }
 }
 
-// TODO: Move me to be shared across all API versions
-pub async fn get_relationship(
-    user_a: i64,
-    user_b: i64,
-    state: &AppState,
-) -> Option<relationship::Model> {
-    Relationship::find()
-        .filter(
-            Condition::any()
-                .add(relationship::Column::Creator.eq(user_a))
-                .add(relationship::Column::Creator.eq(user_b)),
-        )
-        .filter(
-            Condition::any()
-                .add(relationship::Column::Peer.eq(user_a))
-                .add(relationship::Column::Peer.eq(user_b)),
-        )
-        .one(&state.conn)
-        .await
-        .expect("Failed to access database!")
-}
-
 pub async fn delete_relationship(
     Extension(state): Extension<AppState>,
     Extension(session_context): Extension<SessionContext>,
     Path(requested_user_id): Path<i64>,
 ) -> impl IntoResponse {
     let relationship_model =
-        get_relationship(session_context.user.id, requested_user_id, &state).await;
+        get_relationship(session_context.user.id, requested_user_id, &state.conn).await;
 
     match relationship_model {
         None => StatusCode::BAD_REQUEST,
@@ -241,7 +220,7 @@ pub async fn modify_relationship(
         true => {
             // We're probably blocking a user, lets see if a relationship already exists
             let relationship_model =
-                get_relationship(session_context.user.id, requested_user_id, &state).await;
+                get_relationship(session_context.user.id, requested_user_id, &state.conn).await;
 
             if let Some(relationship) = relationship_model {
                 let cached_relationship = (relationship.creator, relationship.peer);
@@ -289,7 +268,7 @@ pub async fn modify_relationship(
         false => {
             // Let's see if we're accepting a friend request or sending a new friend request directly (skipping new_relationship)
             let relationship_model =
-                get_relationship(session_context.user.id, requested_user_id, &state).await;
+                get_relationship(session_context.user.id, requested_user_id, &state.conn).await;
 
             match relationship_model {
                 None => {

@@ -5,7 +5,7 @@ use std::mem;
 use axum_tungstenite::Message;
 
 use crate::fragmented_write::two_frame_fragmentaion;
-use crate::gateway::schema::channels::ChannelCreate;
+use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove};
 use crate::gateway::schema::error_codes::ErrorCode;
 use crate::gateway::schema::message::{MessageDelete, SharedMessage};
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
@@ -36,10 +36,13 @@ pub enum DispatchTypes {
     RelationshipAdd(RelationshipAdd),
     RelationshipRemove(RelationshipRemove),
     ChannelCreate(ChannelCreate),
+    ChannelDelete(ChannelDelete),
     MessageCreate(SharedMessage),
     MessageUpdate(SharedMessage),
     MessageDelete(MessageDelete),
-    TypingStart(TypingStart)
+    TypingStart(TypingStart),
+    ChannelRecipientAdd(ChannelRecipientAdd),
+    ChannelRecipientRemove(ChannelRecipientRemove),
 }
 
 impl From<DispatchTypes> for String {
@@ -50,10 +53,13 @@ impl From<DispatchTypes> for String {
             DispatchTypes::RelationshipAdd(_) => String::from("RELATIONSHIP_ADD"),
             DispatchTypes::RelationshipRemove(_) => String::from("RELATIONSHIP_REMOVE"),
             DispatchTypes::ChannelCreate(_) => String::from("CHANNEL_CREATE"),
+            DispatchTypes::ChannelDelete(_) => String::from("CHANNEL_DELETE"),
             DispatchTypes::MessageCreate(_) => String::from("MESSAGE_CREATE"),
             DispatchTypes::MessageUpdate(_) => String::from("MESSAGE_UPDATE"),
             DispatchTypes::MessageDelete(_) => String::from("MESSAGE_DELETE"),
-            DispatchTypes::TypingStart(_) => String::from("TYPING_START")
+            DispatchTypes::TypingStart(_) => String::from("TYPING_START"),
+            DispatchTypes::ChannelRecipientAdd(_) => String::from("CHANNEL_RECIPIENT_ADD"),
+            DispatchTypes::ChannelRecipientRemove(_) => String::from("CHANNEL_RECIPIENT_REMOVE"),
         }
     }
 }
