@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 use num_traits::FromPrimitive;
 use once_cell::sync::Lazy;
-use sea_orm::{DatabaseConnection, EntityTrait};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use crate::channels::ChannelTypes;
-use crate::database::entities::{channel, message, user};
+use crate::database::entities::{channel, channel_member, message, relationship, user};
 use crate::database::entities::prelude::*;
+use crate::RelationshipType;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InternalChannelPermissions {
@@ -125,6 +126,58 @@ pub async fn internal_permission_calculator(
     match ChannelTypes::from_i32(channel.r#type).expect("Unable to convert type!") {
         ChannelTypes::DM => {
             permissions.extend(DM_DEFAULTS.iter());
+
+            // TODO: See how Discord handles a closed DM and if it reopens it if a message is sent
+            // FIXME: This is a hacky way to get the other user in the DM, see if there's a better way
+            let channel_member = ChannelMember::find()
+                .filter(channel_member::Column::Channel.eq(channel.id))
+                .filter(channel_member::Column::User.ne(user.id))
+                .one(conn)
+                .await
+                .expect("Failed to get channel member");
+
+            let relationship = match channel_member {
+                Some(channel_member) => {
+                    // TODO: Investigate more SQL ways to do this
+                    // Litecord also does this so :) blueprints/relationships.py#373
+                    let relationship = Relationship::find_by_id((channel_member.user, user.id))
+                        .one(conn)
+                        .await
+                        .expect("Failed to get relationship");
+
+                    if relationship.is_some() {
+                        relationship
+                    } else {
+                        Relationship::find_by_id((user.id, channel_member.user))
+                            .one(conn)
+                            .await
+                            .expect("Failed to get relationship")
+                    }
+                }
+                None => None
+            };
+
+            match relationship {
+                None => {
+                    // TODO: Implement privacy settings
+                    // We'll act like they're blocked for now
+                    permissions.remove(&InternalChannelPermissions::SendMessage);
+                    permissions.remove(&InternalChannelPermissions::AddReactions);
+                    permissions.remove(&InternalChannelPermissions::PinMessage);
+                    permissions.remove(&InternalChannelPermissions::StartCall);
+                }
+                Some(relationship) => {
+                    // Check if the relationship is blocked
+                    if relationship.relationship_type.eq(&(RelationshipType::Blocked as i32)) {
+                        // Disable sending messages, adding reactions, pinning messages, and calling
+                        permissions.remove(&InternalChannelPermissions::SendMessage);
+                        permissions.remove(&InternalChannelPermissions::AddReactions);
+                        permissions.remove(&InternalChannelPermissions::PinMessage);
+                        permissions.remove(&InternalChannelPermissions::StartCall);
+                    }
+                }
+            }
+
         }
         ChannelTypes::GroupDM => {
             permissions.extend(DM_DEFAULTS.iter());
