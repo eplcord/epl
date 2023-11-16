@@ -134,7 +134,8 @@ pub async fn new_dm_channel(
     // Calculate if we should insert a DM or group DM
     let mut channel_type = ChannelTypes::DM;
 
-    if new_channel_dm_req.recipients.len() > 1 {
+    // If there's more than one user or no users specified, it's a group DM
+    if new_channel_dm_req.recipients.len().ne(&1) {
         channel_type = ChannelTypes::GroupDM;
     }
 
