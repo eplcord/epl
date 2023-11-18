@@ -33,7 +33,7 @@ pub struct SharedMessage {
     id: String,
     mention_everyone: bool,
     mention_roles: Option<Stub>,
-    mentions: Option<Vec<String>>,
+    mentions: Option<Vec<SharedUser>>,
     message_reference: Option<SharedMessageReference>,
     nonce: Option<String>,
     pinned: bool,
@@ -66,6 +66,7 @@ pub fn generate_message_struct(
     message: message::Model,
     author: Option<user::Model>,
     ref_message: Option<(message::Model, Option<user::Model>)>,
+    mentions: Vec<user::Model>
 ) -> SharedMessage {
     SharedMessage {
         attachments: vec![],
@@ -79,7 +80,7 @@ pub fn generate_message_struct(
         id: message.id.to_string(),
         mention_everyone: message.mention_everyone,
         mention_roles: None,
-        mentions: None,
+        mentions: Some(mentions.into_iter().map(generated_user_struct).collect()),
         message_reference: if let Some(ref_message) = ref_message.clone() {
             Some(SharedMessageReference {
                 channel_id: ref_message.0.channel_id.to_string(),
@@ -91,7 +92,7 @@ pub fn generate_message_struct(
         nonce: message.nonce,
         pinned: message.pinned,
         referenced_message: if let Some(ref_message) = ref_message {
-            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None)))
+            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![])))
         } else {
             None
         },

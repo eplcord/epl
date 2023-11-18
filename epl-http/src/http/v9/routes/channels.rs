@@ -5,14 +5,12 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use chrono::Utc;
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, User};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Mention, Message, User};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::http::v9::{
-    generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference,
-};
+use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
 use crate::nats::send_nats_message;
-use epl_common::database::entities::{channel_member, message, user};
+use epl_common::database::entities::{channel_member, mention, message, user};
 use epl_common::messages::MessageTypes;
 use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, TypingStarted};
 use epl_common::rustflake::Snowflake;
@@ -21,7 +19,7 @@ use sea_orm::*;
 use epl_common::channels::ChannelTypes;
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
 use epl_common::relationship::get_relationship;
-use epl_common::RelationshipType;
+use epl_common::{RelationshipType, USER_MENTION_REGEX};
 
 #[derive(Serialize)]
 pub struct GetMessageRes(Vec<SharedMessage>);
@@ -96,7 +94,28 @@ pub async fn get_messages(
                         generate_refed_message(&state.conn, i.reference_message_id.unwrap()).await;
                 }
 
-                output.push(generate_message_struct(i.clone(), author, refed_message));
+                let mentions: Vec<mention::Model> = Mention::find()
+                    .filter(mention::Column::Message.eq(i.id))
+                    .all(&state.conn)
+                    .await
+                    .expect("Failed to access database!");
+
+                let mut mentioned_users = vec![];
+
+                for i in mentions {
+                    let user = User::find_by_id(i.user)
+                        .one(&state.conn)
+                        .await
+                        .expect("Failed to access database!");
+
+                    if user.is_none() {
+                        continue;
+                    }
+
+                    mentioned_users.push(user.unwrap());
+                }
+
+                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users));
             }
 
             (StatusCode::OK, Json(GetMessageRes(output))).into_response()
@@ -164,6 +183,30 @@ pub async fn send_message(
                 .await;
             }
 
+            let mut mention_results = vec![];
+
+            for i in USER_MENTION_REGEX.captures_iter(&message.content) {
+                let user_id = i.get(1).unwrap().as_str().parse::<i64>();
+
+                if user_id.is_err() {
+                    continue;
+                }
+
+                let user_id = user_id.unwrap();
+
+                let user = User::find()
+                    .filter(user::Column::Id.eq(user_id))
+                    .one(&state.conn)
+                    .await
+                    .expect("Failed to access database!");
+
+                if user.is_none() {
+                    continue;
+                }
+
+                mention_results.push(user.unwrap());
+            }
+
             let new_message = message::Model {
                 id: snowflake,
                 channel_id: requested_channel.id,
@@ -172,7 +215,7 @@ pub async fn send_message(
                 timestamp: chrono::Utc::now().naive_utc(),
                 edited_timestamp: None,
                 tts: message.tts,
-                mention_everyone: message.content.contains("@everyone"),
+                mention_everyone: calculated_permissions.contains(&InternalChannelPermissions::MentionEveryone) && message.content.contains("@everyone"),
                 nonce: Some(message.nonce),
                 r#type: {
                     if refed_message.is_some() {
@@ -202,6 +245,18 @@ pub async fn send_message(
                 .await
                 .expect("Failed to access database!");
 
+            for i in mention_results.as_slice() {
+                Mention::insert(
+                    mention::Model {
+                        message: snowflake,
+                        user: i.id,
+                    }.into_active_model()
+                )
+                    .exec(&state.conn)
+                    .await
+                    .expect("Failed to access database!");
+            }
+
             send_nats_message(
                 &state.nats_client,
                 requested_channel.id.to_string(),
@@ -215,6 +270,7 @@ pub async fn send_message(
                     new_message,
                     Some(session_context.user),
                     refed_message,
+                    mention_results
                 )),
             )
                 .into_response()
@@ -288,12 +344,34 @@ pub async fn edit_message(
                 .await;
             }
 
+            let mentions: Vec<mention::Model> = Mention::find()
+                .filter(mention::Column::Message.eq(requested_message.id))
+                .all(&state.conn)
+                .await
+                .expect("Failed to access database!");
+
+            let mut mentioned_users = vec![];
+
+            for i in mentions {
+                let user = User::find_by_id(i.user)
+                    .one(&state.conn)
+                    .await
+                    .expect("Failed to access database!");
+
+                if user.is_none() {
+                    continue;
+                }
+
+                mentioned_users.push(user.unwrap());
+            }
+
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
                     requested_message,
                     Some(session_context.user),
                     refed_message,
+                    mentioned_users
                 )),
             )
                 .into_response()
@@ -523,7 +601,15 @@ pub async fn add_user_to_channel(
                             .await
                             .expect("Failed to access database!");
 
-                        // TODO: Attach mention to message
+                        Mention::insert(
+                            mention::Model {
+                                message: snowflake,
+                                user: requested_user.id,
+                            }.into_active_model()
+                        )
+                            .exec(&state.conn)
+                            .await
+                            .expect("Failed to access database!");
 
                         send_nats_message(
                             &state.nats_client,
@@ -633,7 +719,15 @@ pub async fn remove_user_from_channel(
                             .await
                             .expect("Failed to access database!");
 
-                        // TODO: Attach mention of the user being removed
+                        Mention::insert(
+                            mention::Model {
+                                message: snowflake,
+                                user: requested_user.id,
+                            }.into_active_model()
+                        )
+                            .exec(&state.conn)
+                            .await
+                            .expect("Failed to access database!");
 
                         send_nats_message(
                             &state.nats_client,

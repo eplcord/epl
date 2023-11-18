@@ -2,9 +2,9 @@ use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
 use crate::gateway::schema::message::{generate_message_struct, generate_refed_message, MessageDelete};
 use crate::state::ThreadData;
 use crate::AppState;
-use epl_common::database::entities::prelude::{Message, User};
+use epl_common::database::entities::prelude::{Mention, Message, User};
 
-use epl_common::database::entities::{message, user};
+use epl_common::database::entities::{mention, message, user};
 use sea_orm::prelude::*;
 
 pub enum DispatchMessageTypes {
@@ -30,10 +30,32 @@ pub async fn dispatch_message(thread_data: &mut ThreadData, state: &AppState, di
         refed_message = generate_refed_message(&state.conn, message.reference_message_id.unwrap()).await;
     }
 
+    let mentions: Vec<mention::Model> = Mention::find()
+        .filter(mention::Column::Message.eq(id))
+        .all(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    let mut mentioned_users = vec![];
+
+    for i in mentions {
+        let user = User::find_by_id(i.user)
+            .one(&state.conn)
+            .await
+            .expect("Failed to access database!");
+
+        if user.is_none() {
+            continue;
+        }
+
+        mentioned_users.push(user.unwrap());
+    }
+
     let dispatch = generate_message_struct(
         message,
         message_author,
-        refed_message
+        refed_message,
+        mentioned_users,
     );
 
     send_message(

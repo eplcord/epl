@@ -17,9 +17,13 @@ pub mod rustflake;
 pub mod permissions;
 pub mod relationship;
 
+
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")
 });
+
+pub static USER_MENTION_REGEX: Lazy<regex::Regex> =
+    Lazy::new(|| regex::Regex::new(r"<@!?(\d+)>").unwrap());
 
 pub fn gen_token() -> String {
     blake3::hash(

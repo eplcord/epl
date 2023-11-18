@@ -3,10 +3,10 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "channel_member")]
+#[sea_orm(table_name = "mention")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub channel: i64,
+    pub message: i64,
     #[sea_orm(primary_key, auto_increment = false)]
     pub user: i64,
 }
@@ -14,13 +14,13 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "super::channel::Entity",
-        from = "Column::Channel",
-        to = "super::channel::Column::Id",
+        belongs_to = "super::message::Entity",
+        from = "Column::Message",
+        to = "super::message::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
     )]
-    Channel,
+    Message,
     #[sea_orm(
         belongs_to = "super::user::Entity",
         from = "Column::User",
@@ -31,9 +31,9 @@ pub enum Relation {
     User,
 }
 
-impl Related<super::channel::Entity> for Entity {
+impl Related<super::message::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Channel.def()
+        Relation::Message.def()
     }
 }
 
