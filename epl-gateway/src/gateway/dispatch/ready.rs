@@ -37,7 +37,7 @@ pub async fn dispatch_ready(
 
     let mut queued_users: HashSet<i64> = HashSet::new();
 
-    let user_struct = crate::gateway::schema::ready::User {
+    let user_struct = epl_common::User {
         verified: user.acct_verified,
         username: user.username,
         purchased_flags: user.purchased_flags.unwrap_or(0),

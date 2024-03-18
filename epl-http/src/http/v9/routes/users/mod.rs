@@ -1,7 +1,10 @@
 pub mod channels;
 pub mod relationships;
 
+use std::io;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
+use aws_sdk_s3::primitives::ByteStream;
 use crate::authorization_extractor::SessionContext;
 use crate::AppState;
 use axum::extract::{Path, Query};
@@ -11,13 +14,18 @@ use axum::{Extension, Json};
 use epl_common::database::entities::{session, user};
 use epl_common::flags::{generate_public_flags, get_user_flags, Badge, UserFlags};
 use epl_common::Stub;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, DeleteResult, EntityTrait, IntoActiveModel, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Cursor, DbErr, DeleteResult, EntityTrait, IntoActiveModel, QueryFilter};
 use sea_orm::ActiveValue::Set;
 use serde_derive::{Deserialize, Serialize};
 use tracing::debug;
 use epl_common::nats::Messages;
 use crate::http::v9::routes::auth::LoginReq;
 use crate::nats::send_nats_message;
+use base64::prelude::*;
+use ril::ImageFormat::WebP;
+use epl_common::database::entities::user::Model;
+use ril::prelude::*;
+use serde_json::json;
 
 #[derive(Serialize)]
 pub struct ProfileRes {
@@ -243,5 +251,99 @@ pub async fn disable_account(
 }
 
 pub async fn delete_account() -> impl IntoResponse {
+    StatusCode::NOT_IMPLEMENTED
+}
+
+#[derive(Deserialize)]
+pub struct UpdateUserReq {
+    pub avatar: Option<String>,
+}
+
+pub async fn update_user(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    data: Json<UpdateUserReq>,
+) -> impl IntoResponse {
+    let mut active_user = session_context.user.into_active_model();
+
+    if let Some(avatar) = &data.avatar {
+        // TODO: Supports gifs
+        let image_bytes = avatar.split("base64,").collect::<Vec<&str>>()[1].as_bytes();
+        let image = BASE64_STANDARD.decode(image_bytes).expect("Invalid base64! Bailing!");
+
+        let hash = sha256::digest(&image);
+
+        let mut image_buffer: Vec<u8> = Vec::new();
+        let image: Image<Rgba> = Image::from_reader_inferred(&mut io::Cursor::new(image)).expect("Invalid image!");
+        image.encode(WebP, &mut image_buffer).expect("Failed to encode image!");
+
+        let s3_res = state.aws.put_object()
+            .bucket("avatars")
+            .key(format!("{}/{hash}.webp", active_user.clone().id.unwrap()))
+            .body(ByteStream::from(image_buffer))
+            .send()
+            .await;
+
+        match s3_res {
+            Ok(_) => {
+                active_user.avatar = Set(Some(hash.to_string()));
+            }
+            Err(_) => {
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        }
+    }
+
+    match active_user.update(&state.conn).await {
+        Ok(user) => {
+            Json(
+                epl_common::User {
+                    verified: user.acct_verified,
+                    username: user.username,
+                    purchased_flags: user.purchased_flags.unwrap_or(0),
+                    premium_type: user.premium_type.unwrap_or(0),
+                    premium: (user.premium_type.unwrap_or(0) != 0),
+                    phone: user.phone,
+                    nsfw_allowed: user.nsfw_allowed,
+                    // FIXME: We need to store more information about the current session
+                    mobile: false,
+                    mfa_enabled: user.mfa_enabled,
+                    id: user.id.to_string(),
+                    // TODO: pomelo related?
+                    global_name: None,
+                    flags: user.flags,
+                    email: user.email,
+                    // TODO: pomelo related?
+                    display_name: None,
+                    discriminator: user.discriminator,
+                    // FIXME: Same as "mobile"
+                    desktop: false,
+                    bio: user.bio.unwrap_or(String::new()),
+                    banner_color: user.banner_colour,
+                    banner: user.banner,
+                    avatar_decoration: user.avatar_decoration,
+                    avatar: user.avatar,
+                    accent_color: user.accent_color,
+                }
+            ).into_response()
+        }
+        Err(_) => {
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct UpdateProfileReq {
+    pub accent_color: Option<i32>,
+    pub bio: Option<String>,
+    pub pronouns: Option<String>
+}
+
+pub async fn update_profile(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    data: Json<UpdateProfileReq>,
+) -> impl IntoResponse {
     StatusCode::NOT_IMPLEMENTED
 }

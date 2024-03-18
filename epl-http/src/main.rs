@@ -1,5 +1,6 @@
 extern crate core;
 
+use std::env;
 use askama::Template;
 use async_nats::Client;
 use axum::http::Method;
@@ -78,6 +79,17 @@ async fn main() {
 
     info!("Connected to NATS server");
 
+    // Workaround for https://github.com/awslabs/aws-sdk-rust/issues/932
+    let aws_config = if env::var("AWS_ENDPOINT_URL").is_ok() {
+        aws_config::from_env().endpoint_url(env::var("AWS_ENDPOINT_URL").unwrap()).load().await
+    } else {
+        aws_config::load_from_env().await
+    };
+
+    let aws = aws_sdk_s3::Client::new(&aws_config);
+
+    info!("Loaded S3 configuration");
+    
     info!("Starting server");
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -94,6 +106,7 @@ async fn main() {
     let app_state = AppState {
         conn,
         nats_client: client,
+        aws
     };
 
     let app = Router::new()
@@ -119,6 +132,7 @@ async fn main() {
 pub struct AppState {
     conn: DatabaseConnection,
     nats_client: Client,
+    aws: aws_sdk_s3::Client
 }
 
 #[derive(Template)]

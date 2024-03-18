@@ -1,4 +1,4 @@
-use epl_common::Stub;
+use epl_common::{Stub, User};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -37,32 +37,6 @@ pub struct UserGuildSettings {
     pub version: i32,
     pub partial: bool,
     pub entries: Vec<Stub>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct User {
-    pub verified: bool,
-    pub username: String,
-    pub purchased_flags: i32,
-    pub premium_type: i32,
-    pub premium: bool,
-    pub phone: Option<String>,
-    pub nsfw_allowed: bool,
-    pub mobile: bool,
-    pub mfa_enabled: bool,
-    pub id: String,
-    pub global_name: Option<String>,
-    pub flags: i64,
-    pub email: String,
-    pub display_name: Option<String>,
-    pub discriminator: String,
-    pub desktop: bool,
-    pub bio: String,
-    pub banner_color: Option<String>,
-    pub banner: Option<String>,
-    pub avatar_decoration: Option<String>,
-    pub avatar: Option<String>,
-    pub accent_color: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

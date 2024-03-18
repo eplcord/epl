@@ -1,8 +1,9 @@
 [workspace]
-
+resolver = "2"
 members = [
     "epl-http",
     "epl-gateway",
     "epl-common",
-    "migration"
+    "migration",
+    "epl-cdn"
 ]
