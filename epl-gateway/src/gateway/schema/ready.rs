@@ -29,6 +29,7 @@ pub struct Ready {
     pub auth_session_id_hash: String,
     pub api_code_version: i32,
     pub analytics_token: String,
+    pub notification_settings: Stub
 }
 
 #[derive(Serialize, Deserialize, Clone)]

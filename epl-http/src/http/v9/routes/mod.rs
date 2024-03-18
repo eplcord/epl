@@ -11,7 +11,7 @@ use crate::http::v9::routes::auth::{
 use crate::http::v9::routes::channels::{add_user_to_channel, delete_message, edit_message, get_messages, remove_user_from_channel, send_message, typing};
 use crate::http::v9::routes::hypesquad::{join_hypesquad, leave_hypesquad};
 use crate::http::v9::routes::users::channels::new_dm_channel;
-use crate::http::v9::routes::users::profile;
+use crate::http::v9::routes::users::{disable_account, profile};
 use crate::http::v9::routes::users::relationships::{
     delete_relationship, get_all_relationships, modify_relationship, new_relationship,
 };
@@ -41,7 +41,8 @@ pub fn assemble_routes() -> Router {
         .route("/relationships", post(new_relationship))
         .route("/relationships/:id", delete(delete_relationship))
         .route("/relationships/:id", put(modify_relationship))
-        .route("/channels", post(new_dm_channel));
+        .route("/channels", post(new_dm_channel))
+        .route("/disable", post(disable_account));
 
     let users = Router::new()
         .nest("/@me", atme)

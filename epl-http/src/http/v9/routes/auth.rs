@@ -200,6 +200,7 @@ pub async fn register(
 pub struct LoginReq {
     pub login: String,
     pub password: String,
+    pub undelete: bool,
 }
 
 #[derive(Serialize)]
@@ -270,6 +271,22 @@ pub async fn login(
             StatusCode::BAD_REQUEST,
             throw_http_error(APIErrorCode::InvalidFormBody, error).await,
         ));
+    }
+
+    // Check if user has the disabled bitflag
+    if get_user_flags(requested_user.flags).contains(&UserFlags::Disabled) {
+        if data.undelete {
+            let mut user = requested_user.clone().into_active_model();
+            
+            user.flags = Set(requested_user.flags - UserFlags::Disabled as i64);
+            
+            user.update(&state.conn).await.expect("Failed to update user!");
+        } else {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                throw_http_error(APIErrorCode::DisabledAccount, vec![]).await,
+            )); 
+        }
     }
 
     // Generate session

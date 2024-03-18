@@ -20,7 +20,7 @@ pub async fn join_hypesquad(
     Extension(session_context): Extension<SessionContext>,
     data: Json<HypesquadReq>,
 ) -> impl IntoResponse {
-    if !(1..3).contains(&data.house_id) {
+    if !(1..=3).contains(&data.house_id) {
         return StatusCode::BAD_REQUEST;
     }
 

@@ -75,6 +75,7 @@ pub enum APIErrorCode {
     InvalidFormBody,
     FriendRequestBlocked,
     CannotSendFriendRequestToSelf,
+    DisabledAccount
 }
 
 impl From<APIErrorCode> for u32 {
@@ -86,6 +87,7 @@ impl From<APIErrorCode> for u32 {
             APIErrorCode::InvalidFormBody => 50035,
             APIErrorCode::CannotSendFriendRequestToSelf => 80003,
             APIErrorCode::FriendRequestBlocked => 80001,
+            APIErrorCode::DisabledAccount => 20013
         }
     }
 }
@@ -101,6 +103,7 @@ impl From<APIErrorCode> for String {
                 "Cannot send friend request to self".to_string()
             }
             APIErrorCode::FriendRequestBlocked => "Friend request blocked".to_string(),
+            APIErrorCode::DisabledAccount => "This account is disabled.".to_string()
         }
     }
 }
@@ -114,6 +117,7 @@ impl From<APIErrorCode> for StatusCode {
             APIErrorCode::InvalidFormBody => StatusCode::BAD_REQUEST,
             APIErrorCode::CannotSendFriendRequestToSelf => StatusCode::BAD_REQUEST,
             APIErrorCode::FriendRequestBlocked => StatusCode::BAD_REQUEST,
+            APIErrorCode::DisabledAccount => StatusCode::BAD_REQUEST
         }
     }
 }

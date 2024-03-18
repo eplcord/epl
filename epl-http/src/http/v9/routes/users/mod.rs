@@ -1,17 +1,23 @@
 pub mod channels;
 pub mod relationships;
 
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use crate::authorization_extractor::SessionContext;
 use crate::AppState;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
-use epl_common::database::entities::user;
-use epl_common::flags::{generate_public_flags, get_user_flags, Badge};
+use epl_common::database::entities::{session, user};
+use epl_common::flags::{generate_public_flags, get_user_flags, Badge, UserFlags};
 use epl_common::Stub;
-use sea_orm::EntityTrait;
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, DeleteResult, EntityTrait, IntoActiveModel, QueryFilter};
+use sea_orm::ActiveValue::Set;
 use serde_derive::{Deserialize, Serialize};
+use tracing::debug;
+use epl_common::nats::Messages;
+use crate::http::v9::routes::auth::LoginReq;
+use crate::nats::send_nats_message;
 
 #[derive(Serialize)]
 pub struct ProfileRes {
@@ -182,4 +188,60 @@ pub async fn profile(
     };
 
     (StatusCode::OK, Json(res)).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct DisableReq {
+    pub password: String,
+}
+
+pub async fn disable_account(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    data: Json<DisableReq>,
+) -> impl IntoResponse {
+    // Verify password
+    let password_hash =
+        PasswordHash::new(&session_context.user.password_hash).expect("Failed to parse password hash!");
+    
+    match Argon2::default()
+        .verify_password(data.password.as_bytes(), &password_hash) {
+        Ok(_) => {
+            let mut flags = session_context.user.flags;
+
+            flags += UserFlags::Disabled as i64;
+
+            let mut active_user = session_context.user.into_active_model();
+
+            active_user.flags = Set(flags);
+
+            match active_user.update(&state.conn).await {
+                Ok(user) => {
+                    send_nats_message(&state.nats_client, user.id.to_string(), Messages::InvalidateGatewaySession { session: "all".to_string() }).await;
+
+                    let session_delete_res = session::Entity::delete_many()
+                        .filter(session::Column::UserId.eq(user.id))
+                        .exec(&state.conn)
+                        .await;
+
+                    match session_delete_res {
+                        Ok(_) => {
+                            StatusCode::NO_CONTENT
+                        }
+                        Err(_) => {
+                            StatusCode::INTERNAL_SERVER_ERROR
+                        }
+                    }
+                },
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            }
+        }
+        Err(_) => {
+            StatusCode::BAD_REQUEST
+        }
+    }
+}
+
+pub async fn delete_account() -> impl IntoResponse {
+    StatusCode::NOT_IMPLEMENTED
 }

@@ -15,7 +15,7 @@ use crate::gateway::schema::error_codes::ErrorCode;
 pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, state: &AppState) {
     match msg {
         Messages::InvalidateGatewaySession { session } => {
-            if session.eq(thread_data.gateway_state.session_id.as_ref().unwrap()) {
+            if session.eq(thread_data.gateway_state.session_id.as_ref().unwrap()) || session.eq("all") {
                 send_message(
                     thread_data,
                     GatewayMessage {

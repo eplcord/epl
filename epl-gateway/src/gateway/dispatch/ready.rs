@@ -16,7 +16,7 @@ use std::collections::HashSet;
 
 use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
-use epl_common::RelationshipType;
+use epl_common::{RelationshipType, Stub};
 use sea_orm::prelude::*;
 
 pub async fn dispatch_ready(
@@ -266,6 +266,7 @@ pub async fn dispatch_ready(
             api_code_version: 1,
             // We don't do analytics
             analytics_token: String::from(""),
+            notification_settings: Stub {},
         }))),
     )
     .await;

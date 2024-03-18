@@ -1,0 +1,15 @@
+pub enum Buckets {
+    Emojis,
+    Icons,
+    Splashes,
+    DiscoverySplashes,
+    Banners,
+    Avatars,
+    Guilds,
+    AvatarDecorations,
+    AppIcons,
+    AppAssets,
+    TeamIcons,
+    Stickers,
+    GuildEvents,
+}
