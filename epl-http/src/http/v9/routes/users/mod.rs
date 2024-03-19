@@ -68,12 +68,14 @@ pub struct User {
 pub struct UserProfile {
     accent_color: Option<i32>,
     banner: Option<String>,
-    bio: String,
+    bio: Option<String>,
     // TODO: guessing for string here
     emoji: Option<String>,
     // TODO: what
     popout_animation_particle_type: Option<String>,
-    theme_colors: Vec<i32>,
+    theme_colors: Option<Vec<i32>>,
+    pronouns: Option<String>,
+    profile_effect: Option<String>
 }
 
 #[derive(Serialize)]
@@ -105,8 +107,8 @@ pub enum ConnectedAccountMetadata {
 
 #[derive(Deserialize)]
 pub struct ProfileQuery {
-    with_mutual_guilds: bool,
-    with_mutual_friends_count: bool,
+    with_mutual_guilds: Option<bool>,
+    with_mutual_friends_count: Option<bool>,
 }
 
 pub async fn profile(
@@ -144,12 +146,12 @@ pub async fn profile(
         connected_accounts: vec![],
         guild_badges: vec![],
         legacy_username: None,
-        mutual_friends_count: if profile_query.with_mutual_friends_count {
+        mutual_friends_count: if profile_query.with_mutual_friends_count.unwrap_or(false) {
             Some(0)
         } else {
             None
         },
-        mutual_guilds: if profile_query.with_mutual_guilds {
+        mutual_guilds: if profile_query.with_mutual_guilds.unwrap_or(false) {
             Some(vec![])
         } else {
             None
@@ -164,7 +166,7 @@ pub async fn profile(
             avatar_decoration: requested_user.avatar_decoration,
             banner: requested_user.banner.clone(),
             banner_color: requested_user.banner_colour,
-            bio: requested_user.bio.clone().unwrap_or(String::new()),
+            bio: requested_user.bio.clone().unwrap_or_default(),
             discriminator: requested_user.discriminator,
             flags: {
                 if session_context.user.id.eq(&requested_user_id) {
@@ -186,12 +188,14 @@ pub async fn profile(
             username: requested_user.username,
         },
         user_profile: UserProfile {
-            accent_color: None,
+            accent_color: requested_user.accent_color.map(|x| x.parse::<i32>().unwrap()),
             banner: requested_user.banner,
-            bio: requested_user.bio.unwrap_or(String::new()),
+            bio: requested_user.bio,
             emoji: None,
             popout_animation_particle_type: None,
-            theme_colors: vec![],
+            theme_colors: None,
+            pronouns: requested_user.pronouns,
+            profile_effect: None,
         },
     };
 
@@ -257,6 +261,7 @@ pub async fn delete_account() -> impl IntoResponse {
 #[derive(Deserialize)]
 pub struct UpdateUserReq {
     pub avatar: Option<String>,
+    pub global_name: Option<String>
 }
 
 pub async fn update_user(
@@ -337,7 +342,12 @@ pub async fn update_user(
 pub struct UpdateProfileReq {
     pub accent_color: Option<i32>,
     pub bio: Option<String>,
-    pub pronouns: Option<String>
+    pub pronouns: Option<String>,
+    pub profile_effect: Option<String>,
+    pub banner: Option<String>,
+    pub theme_colors: Option<String>,
+    pub popout_animation_particle_type: Option<String>,
+    pub emoji: Option<String>
 }
 
 pub async fn update_profile(
@@ -345,5 +355,40 @@ pub async fn update_profile(
     Extension(session_context): Extension<SessionContext>,
     data: Json<UpdateProfileReq>,
 ) -> impl IntoResponse {
-    StatusCode::NOT_IMPLEMENTED
+    let mut active_user = session_context.user.into_active_model();
+
+    if let Some(accent_color) = data.accent_color {
+        active_user.accent_color = Set(Some(accent_color.to_string()));
+    }
+
+    if let Some(bio) = &data.bio {
+        active_user.bio = Set(Some(bio.clone()));
+    }
+
+    if let Some(pronouns) = &data.pronouns {
+        active_user.pronouns = Set(Some(pronouns.clone()));
+    }
+
+    if let Some(banner) = &data.banner {
+        active_user.banner = Set(Some(banner.clone()));
+    }
+
+    match active_user.update(&state.conn).await {
+        Ok(user) => {
+            Json(UserProfile {
+                accent_color: user.accent_color.map(|x| x.parse::<i32>().unwrap()),
+                bio: user.bio,
+                pronouns: user.pronouns,
+                banner: user.banner,
+                // TODO: Figure these out
+                profile_effect: None,
+                theme_colors: None,
+                popout_animation_particle_type: None,
+                emoji: None,
+            }).into_response()
+        }
+        Err(_) => {
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }

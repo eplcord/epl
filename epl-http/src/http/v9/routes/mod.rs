@@ -49,6 +49,8 @@ pub fn assemble_routes() -> Router {
     let users = Router::new()
         .nest("/@me", atme)
         .route("/:id/profile", get(profile))
+        // Workaround
+        .route("/%40me/profile", patch(update_profile))
         .route_layer(middleware::from_fn(get_session_context));
 
     let hypesquad = Router::new()
