@@ -6,6 +6,7 @@ pub mod channel;
 pub mod channel_member;
 pub mod mention;
 pub mod message;
+pub mod note;
 pub mod relationship;
 pub mod session;
 pub mod user;

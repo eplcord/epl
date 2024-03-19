@@ -4,6 +4,7 @@ pub use super::channel::Entity as Channel;
 pub use super::channel_member::Entity as ChannelMember;
 pub use super::mention::Entity as Mention;
 pub use super::message::Entity as Message;
+pub use super::note::Entity as Note;
 pub use super::relationship::Entity as Relationship;
 pub use super::session::Entity as Session;
 pub use super::user::Entity as User;

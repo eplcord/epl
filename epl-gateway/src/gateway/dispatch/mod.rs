@@ -20,6 +20,7 @@ use tracing::debug;
 use tungstenite::protocol::frame::coding::{CloseCode, Data, OpCode};
 use tungstenite::protocol::frame::{CloseFrame, Frame};
 use crate::gateway::dispatch::typing::TypingStart;
+use crate::gateway::dispatch::user_note_update::UserNoteUpdate;
 
 pub(crate) mod channel;
 pub(crate) mod message;
@@ -27,6 +28,7 @@ pub(crate) mod ready;
 pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
 pub(crate) mod typing;
+pub(crate) mod user_note_update;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
@@ -43,6 +45,7 @@ pub enum DispatchTypes {
     TypingStart(TypingStart),
     ChannelRecipientAdd(ChannelRecipientAdd),
     ChannelRecipientRemove(ChannelRecipientRemove),
+    UserNoteUpdate(UserNoteUpdate)
 }
 
 impl From<DispatchTypes> for String {
@@ -60,6 +63,7 @@ impl From<DispatchTypes> for String {
             DispatchTypes::TypingStart(_) => String::from("TYPING_START"),
             DispatchTypes::ChannelRecipientAdd(_) => String::from("CHANNEL_RECIPIENT_ADD"),
             DispatchTypes::ChannelRecipientRemove(_) => String::from("CHANNEL_RECIPIENT_REMOVE"),
+            DispatchTypes::UserNoteUpdate(_) => String::from("USER_NOTE_UPDATE"),
         }
     }
 }
@@ -173,7 +177,6 @@ pub async fn send_fragments(
     thread_data: &mut ThreadData,
     message: Message,
 ) -> Result<(), Box<dyn Error + '_>> {
-    debug!("erthaddddddddddddddd: {:?}", message);
     let (mut data, opdata) = match message {
         Message::Text(d) => (d.into(), Data::Text),
         Message::Binary(d) => (d, Data::Binary),
@@ -211,7 +214,6 @@ pub async fn send_fragments(
 
     for i in frames {
         let message = Message::Frame(i);
-        debug!("sending {:?}", message);
         thread_data.socket.send(message).await?;
     }
 

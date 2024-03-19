@@ -10,6 +10,7 @@ use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::nats::Messages;
 use crate::gateway::dispatch::typing::dispatch_typing_start;
+use crate::gateway::dispatch::user_note_update::dispatch_user_note_update;
 use crate::gateway::schema::error_codes::ErrorCode;
 
 pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, state: &AppState) {
@@ -58,6 +59,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::ChannelRecipientRemove { channel_id, user_id } => {
             dispatch_channel_recipient_update(thread_data, state, channel_id, user_id, ChannelRecipientUpdateType::Remove).await;
+        }
+        Messages::UserNoteUpdate { creator_id, subject_id } => {
+            dispatch_user_note_update(thread_data, state, creator_id, subject_id).await;
         }
     }
 }

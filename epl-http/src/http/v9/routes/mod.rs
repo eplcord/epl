@@ -17,6 +17,7 @@ use crate::http::v9::routes::users::relationships::{
 };
 use axum::routing::{delete, get, patch, post, put};
 use axum::{middleware, Router};
+use crate::http::v9::routes::users::notes::{get_notes, put_notes};
 
 pub fn assemble_routes() -> Router {
     let sessions = Router::new()
@@ -44,6 +45,8 @@ pub fn assemble_routes() -> Router {
         .route("/channels", post(new_dm_channel))
         .route("/disable", post(disable_account))
         .route("/profile", patch(update_profile))
+        .route("/notes/:id", get(get_notes))
+        .route("/notes/:id", put(put_notes))
         .route("/", patch(update_user));
 
     let users = Router::new()

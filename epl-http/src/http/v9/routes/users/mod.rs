@@ -1,5 +1,6 @@
 pub mod channels;
 pub mod relationships;
+pub mod notes;
 
 use std::io;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};

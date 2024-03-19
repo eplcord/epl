@@ -83,6 +83,13 @@ pub enum Messages {
         /// The user that is being removed
         user_id: i64,
     },
+    /// A user has updated their notes about another user
+    UserNoteUpdate {
+        /// The creator of the note
+        creator_id: i64,
+        /// The subject of the note
+        subject_id: i64
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

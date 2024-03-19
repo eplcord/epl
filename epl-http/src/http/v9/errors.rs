@@ -70,24 +70,26 @@ pub struct APIErrorMessage {
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum APIErrorCode {
     UnknownAccount,
+    UnknownUser,
+    DisabledAccount, 
     Unauthorized,
     PasswordDoesNotMatch,
     InvalidFormBody,
     FriendRequestBlocked,
     CannotSendFriendRequestToSelf,
-    DisabledAccount
 }
 
 impl From<APIErrorCode> for u32 {
     fn from(code: APIErrorCode) -> u32 {
         match code {
             APIErrorCode::UnknownAccount => 10001,
+            APIErrorCode::UnknownUser => 10013,
+            APIErrorCode::DisabledAccount => 20013,
             APIErrorCode::Unauthorized => 40001,
             APIErrorCode::PasswordDoesNotMatch => 50018,
             APIErrorCode::InvalidFormBody => 50035,
             APIErrorCode::CannotSendFriendRequestToSelf => 80003,
-            APIErrorCode::FriendRequestBlocked => 80001,
-            APIErrorCode::DisabledAccount => 20013
+            APIErrorCode::FriendRequestBlocked => 80001
         }
     }
 }
@@ -96,6 +98,8 @@ impl From<APIErrorCode> for String {
     fn from(code: APIErrorCode) -> String {
         match code {
             APIErrorCode::UnknownAccount => "Unknown Account".to_string(),
+            APIErrorCode::UnknownUser => "Unknown User".to_string(),
+            APIErrorCode::DisabledAccount => "This account is disabled.".to_string(),
             APIErrorCode::Unauthorized => "Unauthorized".to_string(),
             APIErrorCode::PasswordDoesNotMatch => "Password does not match".to_string(),
             APIErrorCode::InvalidFormBody => "Unknown Form Body".to_string(),
@@ -103,7 +107,6 @@ impl From<APIErrorCode> for String {
                 "Cannot send friend request to self".to_string()
             }
             APIErrorCode::FriendRequestBlocked => "Friend request blocked".to_string(),
-            APIErrorCode::DisabledAccount => "This account is disabled.".to_string()
         }
     }
 }
@@ -112,12 +115,13 @@ impl From<APIErrorCode> for StatusCode {
     fn from(code: APIErrorCode) -> StatusCode {
         match code {
             APIErrorCode::UnknownAccount => StatusCode::BAD_REQUEST,
+            APIErrorCode::UnknownUser => StatusCode::NOT_FOUND,
+            APIErrorCode::DisabledAccount => StatusCode::BAD_REQUEST,
             APIErrorCode::Unauthorized => StatusCode::UNAUTHORIZED,
             APIErrorCode::PasswordDoesNotMatch => StatusCode::BAD_REQUEST,
             APIErrorCode::InvalidFormBody => StatusCode::BAD_REQUEST,
             APIErrorCode::CannotSendFriendRequestToSelf => StatusCode::BAD_REQUEST,
             APIErrorCode::FriendRequestBlocked => StatusCode::BAD_REQUEST,
-            APIErrorCode::DisabledAccount => StatusCode::BAD_REQUEST
         }
     }
 }

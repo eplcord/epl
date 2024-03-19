@@ -13,6 +13,7 @@ mod m20230605_023233_create_channel_member;
 mod m20230607_054224_rename_message_reference_in_message;
 mod m20230607_055518_add_reference_channel_id_to_message;
 mod m20231118_011903_create_mentions;
+mod m20240319_061446_create_notes;
 
 pub struct Migrator;
 
@@ -33,6 +34,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20230607_054224_rename_message_reference_in_message::Migration),
             Box::new(m20230607_055518_add_reference_channel_id_to_message::Migration),
             Box::new(m20231118_011903_create_mentions::Migration),
+            Box::new(m20240319_061446_create_notes::Migration),
         ]
     }
 }
