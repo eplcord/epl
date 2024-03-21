@@ -8,10 +8,10 @@ use crate::gateway::schema::ready::{
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::database::auth::{get_all_sessions, get_session_by_token};
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Relationship, User};
-use epl_common::database::entities::{channel, channel_member, relationship, user};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Relationship, User, Message};
+use epl_common::database::entities::{channel, channel_member, message, relationship, user};
 use epl_common::options::{EplOptions, Options};
-use sea_orm::{Condition, EntityTrait};
+use sea_orm::{Condition, EntityTrait, QueryOrder};
 use std::collections::HashSet;
 
 use epl_common::channels::ChannelTypes;
@@ -201,15 +201,25 @@ pub async fn dispatch_ready(
                 e.user.to_string()
             })
             .collect();
+        
+        let last_message_id: Option<String> = Message::find()
+            .filter(message::Column::ChannelId.eq(channel.id))
+            .order_by_desc(message::Column::Id)
+            .one(&state.conn)
+            .await
+            .expect("Failed to access database!")
+            .map(|e| e.id.to_string());
 
         private_channels.push(PrivateChannel {
             _type: channel.r#type,
             recipient_ids,
-            last_message_id: channel.last_message_id.map(|e| e.to_string()),
+            last_message_id,
             is_spam: None,
             id: channel.id.to_string(),
             flags: channel.flags.unwrap_or(9),
             owner_id: channel.owner_id.map(|e| e.to_string()),
+            name: channel.name,
+            icon: channel.icon,
         })
     }
 

@@ -1,4 +1,4 @@
-use crate::gateway::dispatch::channel::{ChannelRecipientUpdateType, dispatch_channel_create, dispatch_channel_delete, dispatch_channel_recipient_update};
+use crate::gateway::dispatch::channel::{ChannelRecipientUpdateType, dispatch_channel_update, dispatch_channel_delete, dispatch_channel_recipient_update, ChannelTypeUpdate};
 use crate::gateway::dispatch::message::{dispatch_message, dispatch_message_delete, DispatchMessageTypes};
 use crate::gateway::dispatch::relationships::{
     dispatch_relationship_add, dispatch_relationship_remove,
@@ -37,7 +37,7 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
             dispatch_relationship_remove(thread_data, state, user_id, req_type).await;
         }
         Messages::ChannelCreate { id } => {
-            dispatch_channel_create(thread_data, state, id).await;
+            dispatch_channel_update(thread_data, state, id, ChannelTypeUpdate::CREATE).await;
         }
         Messages::ChannelDelete { id } => {
             dispatch_channel_delete(thread_data, state, id).await;
@@ -62,6 +62,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::UserNoteUpdate { creator_id, subject_id } => {
             dispatch_user_note_update(thread_data, state, creator_id, subject_id).await;
+        }
+        Messages::ChannelUpdate { channel_id } => {
+            dispatch_channel_update(thread_data, state, channel_id, ChannelTypeUpdate::UPDATE).await;
         }
     }
 }

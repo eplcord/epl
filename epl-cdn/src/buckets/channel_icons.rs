@@ -13,12 +13,12 @@ pub struct AvatarsQuery {
 }
 
 
-pub async fn avatars(
-    Path((user_id, file)): Path<(u64, String)>,
+pub async fn channel_icons(
+    Path((channel_id, file)): Path<(u64, String)>,
     Extension(state): Extension<AppState>,
     path_query: Query<AvatarsQuery>
 ) -> impl IntoResponse {
-    debug!("Hello! You wanted {user_id}'s avatar with the filename {file}!");
+    debug!("Hello! You wanted {channel_id}'s channel icon with the filename {file}!");
 
-    query_cached_size_or_create("avatars", &state, user_id, file, path_query.size).await
+    query_cached_size_or_create("channel-icons", &state, channel_id, file, path_query.size).await
 }

@@ -27,6 +27,7 @@ use ril::ImageFormat::WebP;
 use epl_common::database::entities::user::Model;
 use ril::prelude::*;
 use serde_json::json;
+use epl_common::options::{EplOptions, Options};
 
 #[derive(Serialize)]
 pub struct ProfileRes {
@@ -259,10 +260,12 @@ pub async fn delete_account() -> impl IntoResponse {
     StatusCode::NOT_IMPLEMENTED
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct UpdateUserReq {
     pub avatar: Option<String>,
-    pub global_name: Option<String>
+    pub global_name: Option<String>,
+    pub new_password: Option<String>,
+    pub password: Option<String>
 }
 
 pub async fn update_user(
@@ -271,6 +274,7 @@ pub async fn update_user(
     data: Json<UpdateUserReq>,
 ) -> impl IntoResponse {
     let mut active_user = session_context.user.into_active_model();
+    let options = EplOptions::get();
 
     if let Some(avatar) = &data.avatar {
         // TODO: Supports gifs
@@ -284,8 +288,8 @@ pub async fn update_user(
         image.encode(WebP, &mut image_buffer).expect("Failed to encode image!");
 
         let s3_res = state.aws.put_object()
-            .bucket("avatars")
-            .key(format!("{}/{hash}.webp", active_user.clone().id.unwrap()))
+            .bucket(options.s3_bucket)
+            .key(format!("avatars/{}/{hash}.webp", active_user.clone().id.unwrap()))
             .body(ByteStream::from(image_buffer))
             .send()
             .await;
@@ -296,6 +300,36 @@ pub async fn update_user(
             }
             Err(_) => {
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        }
+    }
+
+    if let Some(new_password) = &data.new_password {
+        let data = data.clone();
+
+        if data.password.is_none() {
+            return StatusCode::BAD_REQUEST.into_response();
+        }
+
+        let current_password = data.password.clone().unwrap();
+        let current_password_hash = active_user.password_hash.clone().unwrap();
+
+        if current_password.is_empty() {
+            return StatusCode::BAD_REQUEST.into_response();
+        }
+
+        // Verify password
+        let password_hash =
+            PasswordHash::new(&current_password_hash).expect("Failed to parse password hash!");
+
+        match Argon2::default()
+            .verify_password(current_password.as_bytes(), &password_hash) {
+            Ok(_) => {
+                // TODO: Implement :)
+                return StatusCode::NOT_IMPLEMENTED.into_response();
+            }
+            Err(_) => {
+                return StatusCode::BAD_REQUEST.into_response();
             }
         }
     }

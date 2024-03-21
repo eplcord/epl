@@ -14,6 +14,7 @@ pub struct EplOptions {
     pub require_ssl: bool,
     pub registration: bool,
     pub maxminddb: String,
+    pub s3_bucket: String,
 }
 pub trait Options {
     fn get() -> EplOptions;
@@ -39,6 +40,7 @@ impl Options for EplOptions {
                 .parse()
                 .unwrap(),
             maxminddb: env::var("MAXMIND_DB_PATH").unwrap_or_else(|_| "GeoLite2-City.mmdb".to_string()),
+            s3_bucket: env::var("S3_BUCKET").unwrap_or_else(|_| "epl".to_string()),
         }
     }
 }

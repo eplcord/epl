@@ -1,12 +1,22 @@
+use std::io;
+use aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder;
+use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
+use aws_sdk_s3::primitives::ByteStream;
 use crate::authorization_extractor::SessionContext;
 use crate::AppState;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
+use ril::{Image, Rgba};
+use ril::ImageFormat::WebP;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Mention, Message, User};
 use serde_derive::{Deserialize, Serialize};
+
+use ril::prelude::*;
 
 use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
 use crate::nats::send_nats_message;
@@ -20,6 +30,11 @@ use epl_common::channels::ChannelTypes;
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
 use epl_common::relationship::get_relationship;
 use epl_common::{RelationshipType, USER_MENTION_REGEX};
+use epl_common::flags::{generate_public_flags, get_user_flags};
+use epl_common::nats::Messages;
+use epl_common::options::{EplOptions, Options};
+use crate::http::v9::routes::users::channels::{ResChannel, ResChannelMember};
+
 
 #[derive(Serialize)]
 pub struct GetMessageRes(Vec<SharedMessage>);
@@ -738,6 +753,184 @@ pub async fn remove_user_from_channel(
 
                         StatusCode::NO_CONTENT.into_response()
                     }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ModifyChannelReq {
+    pub name: Option<String>,
+    pub icon: Option<String>,
+    pub owner: Option<String>
+}
+
+pub async fn modify_channel(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    Path(channel_id): Path<i64>,
+    Json(data): Json<ModifyChannelReq>
+) -> impl IntoResponse {
+    // Ensure channel actually exists
+    let requested_channel = Channel::find_by_id(channel_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    match requested_channel {
+        None => {
+            StatusCode::BAD_REQUEST.into_response()
+        }
+        Some(requested_channel) => {
+            // Calculate permissions
+            let calculated_permissions = internal_permission_calculator(
+                &requested_channel,
+                &session_context.user,
+                None,
+                &state.conn
+            ).await;
+
+            let options = EplOptions::get();
+
+            let mut active_channel = requested_channel.clone().into_active_model();
+            let mut queued_messages: Vec<message::ActiveModel> = vec![];
+
+            if let Some(name) = data.name {
+                if !calculated_permissions.contains(&InternalChannelPermissions::EditName) {
+                    return StatusCode::BAD_REQUEST.into_response();
+                }
+
+                let snowflake = Snowflake::default().generate();
+
+                queued_messages.push(message::ActiveModel {
+                    id: Set(snowflake),
+                    channel_id: Set(requested_channel.id),
+                    author: Set(Some(session_context.user.id)),
+                    content: Set(name.clone()),
+                    timestamp: Set(chrono::Utc::now().naive_utc()),
+                    r#type: Set(MessageTypes::ChannelNameChange as i32),
+                    tts: Set(false),
+                    mention_everyone: Set(false),
+                    pinned: Set(false),
+                    ..Default::default()
+                });
+
+                active_channel.name = Set(Some(name));
+            }
+
+            if let Some(owner) = data.owner {
+                if requested_channel.owner_id.is_some_and(|x| x.eq(&session_context.user.id)) {
+                    active_channel.owner_id = Set(Some(owner.parse().unwrap()));
+                } else {
+                    return StatusCode::BAD_REQUEST.into_response();
+                }
+            }
+
+            if let Some(icon) = data.icon {
+                if !calculated_permissions.contains(&InternalChannelPermissions::EditIcon) {
+                    return StatusCode::BAD_REQUEST.into_response();
+                }
+
+                let snowflake = Snowflake::default().generate();
+
+                queued_messages.push(message::ActiveModel {
+                    id: Set(snowflake),
+                    channel_id: Set(requested_channel.id),
+                    author: Set(Some(session_context.user.id)),
+                    content: Set("".to_string()),
+                    timestamp: Set(chrono::Utc::now().naive_utc()),
+                    r#type: Set(MessageTypes::ChannelIconChange as i32),
+                    tts: Set(false),
+                    mention_everyone: Set(false),
+                    pinned: Set(false),
+                    ..Default::default()
+                });
+                
+                let image_bytes = icon.split("base64,").collect::<Vec<&str>>()[1].as_bytes();
+                let image = BASE64_STANDARD.decode(image_bytes).expect("Invalid base64! Bailing!");
+
+                let hash = sha256::digest(&image);
+
+                let mut image_buffer: Vec<u8> = Vec::new();
+                let image: Image<Rgba> = Image::from_reader_inferred(&mut io::Cursor::new(image)).expect("Invalid image!");
+                image.encode(WebP, &mut image_buffer).expect("Failed to encode image!");
+
+                let s3_res = state.aws.put_object()
+                    .bucket(options.s3_bucket)
+                    .key(format!("channel-icons/{}/{hash}.webp", active_channel.clone().id.unwrap()))
+                    .body(ByteStream::from(image_buffer))
+                    .send()
+                    .await;
+                
+                match s3_res {
+                    Ok(_) => {
+                        active_channel.icon = Set(Some(hash.to_string()))
+                    }
+                    Err(_) => {
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
+                }
+            }
+
+            let mut users: Vec<ResChannelMember> = vec![];
+
+            for (_chnlmem, usr) in ChannelMember::find()
+                .filter(channel_member::Column::Channel.eq(requested_channel.id))
+                .find_also_related(User)
+                .all(&state.conn)
+                .await
+                .expect("Failed to access database!") {
+
+                match usr {
+                    None => {
+                        // Channel member references non existent user?
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
+                    Some(usr) => {
+                        users.push(ResChannelMember {
+                            accent_color: usr.accent_color.map(|e| {
+                                e.parse().expect("Failed to parse user's accent_color")
+                            }),
+                            avatar: usr.avatar,
+                            avatar_decoration: usr.avatar_decoration,
+                            banner: usr.banner,
+                            banner_color: usr.banner_colour,
+                            discriminator: Some(usr.discriminator),
+                            display_name: None,
+                            flags: generate_public_flags(get_user_flags(usr.flags)),
+                            global_name: None,
+                            id: usr.id.to_string(),
+                            public_flags: generate_public_flags(get_user_flags(usr.flags)),
+                            username: usr.username,
+                        })
+                    }
+                }
+            }
+
+            match active_channel.update(&state.conn).await {
+                Ok(channel) => {
+                    for i in queued_messages {
+                        let message = i.insert(&state.conn).await.expect("Failed to insert channel update message!");
+
+                        send_nats_message(&state.nats_client, channel.id.to_string(), Messages::MessageCreate { id: message.id }).await;
+                    }
+
+                    send_nats_message(&state.nats_client, channel.id.to_string(), Messages::ChannelUpdate { channel_id: channel.id }).await;
+
+                    Json(ResChannel {
+                        flags: channel.flags.unwrap_or(0),
+                        id: channel.id.to_string(),
+                        icon: channel.icon,
+                        last_message_id: channel.last_message_id.map(|x| x.to_string()),
+                        name: channel.name,
+                        owner_id: channel.owner_id.map(|x| x.to_string()),
+                        recipients: Some(users),
+                        _type: channel.r#type,
+                    }).into_response()
+                }
+                Err(_) => {
+                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
                 }
             }
         }

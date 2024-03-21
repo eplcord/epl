@@ -89,6 +89,9 @@ pub enum Messages {
         creator_id: i64,
         /// The subject of the note
         subject_id: i64
+    },
+    ChannelUpdate {
+        channel_id: i64
     }
 }
 

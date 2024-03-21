@@ -8,7 +8,7 @@ use crate::authorization_extractor::get_session_context;
 use crate::http::v9::routes::auth::{
     location_metadata, login, logout, logout_session, register, sessions, verify_email,
 };
-use crate::http::v9::routes::channels::{add_user_to_channel, delete_message, edit_message, get_messages, remove_user_from_channel, send_message, typing};
+use crate::http::v9::routes::channels::{add_user_to_channel, delete_message, edit_message, get_messages, modify_channel, remove_user_from_channel, send_message, typing};
 use crate::http::v9::routes::hypesquad::{join_hypesquad, leave_hypesquad};
 use crate::http::v9::routes::users::channels::new_dm_channel;
 use crate::http::v9::routes::users::{disable_account, profile, update_profile, update_user};
@@ -69,6 +69,7 @@ pub fn assemble_routes() -> Router {
         .route("/:id/typing", post(typing))
         .route("/:id/recipients/:id", put(add_user_to_channel))
         .route("/:id/recipients/:id", delete(remove_user_from_channel))
+        .route("/:id", patch(modify_channel))
         .route_layer(middleware::from_fn(get_session_context));
 
     Router::new()

@@ -25,7 +25,7 @@ pub struct NewDMChannelReq {
 }
 
 #[derive(Serialize, Clone)]
-pub struct NewDMChannelUser {
+pub struct ResChannelMember {
     pub accent_color: Option<i32>,
     pub avatar: Option<String>,
     pub avatar_decoration: Option<String>,
@@ -42,7 +42,7 @@ pub struct NewDMChannelUser {
 
 #[skip_serializing_none]
 #[derive(Serialize, Clone)]
-pub struct NewDMChannelRes {
+pub struct ResChannel {
     pub flags: i64,
     pub id: String,
     pub icon: Option<String>,
@@ -50,7 +50,7 @@ pub struct NewDMChannelRes {
     pub last_message_id: Option<String>,
     pub name: Option<String>,
     pub owner_id: Option<String>,
-    pub recipients: Vec<NewDMChannelUser>,
+    pub recipients: Option<Vec<ResChannelMember>>,
     #[serde(rename = "type")]
     pub _type: i32,
 }
@@ -62,7 +62,7 @@ pub async fn new_dm_channel(
 ) -> impl IntoResponse {
     let snowflake = Snowflake::default().generate();
 
-    let mut users: Vec<NewDMChannelUser> = vec![];
+    let mut users: Vec<ResChannelMember> = vec![];
     let mut channel_members: Vec<channel_member::ActiveModel> = vec![];
 
     // First we ensure the users both exist and are friends with the creator
@@ -98,8 +98,8 @@ pub async fn new_dm_channel(
                                 .into_active_model(),
                             );
 
-                            // And the required NewDMChannelUser for the HTTP response
-                            users.push(NewDMChannelUser {
+                            // And the required ResChannelMember for the HTTP response
+                            users.push(ResChannelMember {
                                 accent_color: user.accent_color.map(|e| {
                                     e.parse().expect("Failed to parse user's accent_color")
                                 }),
@@ -173,7 +173,7 @@ pub async fn new_dm_channel(
 
     (
         StatusCode::OK,
-        Json(NewDMChannelRes {
+        Json(ResChannel {
             flags: 0,
             id: snowflake.to_string(),
             icon: None,
@@ -185,7 +185,7 @@ pub async fn new_dm_channel(
                     _ => None,
                 }
             },
-            recipients: users,
+            recipients: Some(users),
             _type: channel_type as i32,
         }),
     )
