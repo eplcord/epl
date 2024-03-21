@@ -14,7 +14,7 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use epl_common::database::entities::{session, user};
 use epl_common::flags::{generate_public_flags, get_user_flags, Badge, UserFlags};
-use epl_common::Stub;
+use epl_common::{nats, Stub};
 use sea_orm::{ActiveModelTrait, ColumnTrait, Cursor, DbErr, DeleteResult, EntityTrait, IntoActiveModel, QueryFilter};
 use sea_orm::ActiveValue::Set;
 use serde_derive::{Deserialize, Serialize};
@@ -27,6 +27,7 @@ use ril::ImageFormat::WebP;
 use epl_common::database::entities::user::Model;
 use ril::prelude::*;
 use serde_json::json;
+use epl_common::database::entities;
 use epl_common::options::{EplOptions, Options};
 
 #[derive(Serialize)]
@@ -134,20 +135,29 @@ pub async fn profile(
 
     let flags = get_user_flags(requested_user.flags);
 
-    let badges: Vec<Badge> = flags
+    let mut badges: Vec<Badge> = flags
         .iter()
         .filter_map(|i| {
             let x: Option<Badge> = (*i).into();
             x
         })
         .collect();
+    
+    if requested_user.legacy_name.is_some() {
+        badges.push(Badge {
+            description: format!("Originally known as {}", requested_user.legacy_name.clone().unwrap()),
+            icon: "6de6d34650760ba5551a79732e98ed60".to_string(),
+            id: "legacy_username".to_string(),
+            link: None,
+        });
+    }
 
     // mostly stub
     let res = ProfileRes {
         badges,
         connected_accounts: vec![],
         guild_badges: vec![],
-        legacy_username: None,
+        legacy_username: requested_user.legacy_name,
         mutual_friends_count: if profile_query.with_mutual_friends_count.unwrap_or(false) {
             Some(0)
         } else {
@@ -178,7 +188,7 @@ pub async fn profile(
                 }
             },
             // FIXME: grab this when pomelo is impl
-            global_name: None,
+            global_name: requested_user.display_name.clone(),
             id: requested_user.id.to_string(),
             public_flags: {
                 if session_context.user.id.eq(&requested_user_id) {
@@ -304,6 +314,14 @@ pub async fn update_user(
         }
     }
 
+    if let Some(global_name) = &data.global_name {
+        if global_name.is_empty() {
+            active_user.display_name = Set(None);
+        } else {
+            active_user.display_name = Set(Some(global_name.clone()));
+        }
+    }
+
     if let Some(new_password) = &data.new_password {
         let data = data.clone();
 
@@ -350,11 +368,11 @@ pub async fn update_user(
                     mfa_enabled: user.mfa_enabled,
                     id: user.id.to_string(),
                     // TODO: pomelo related?
-                    global_name: None,
+                    global_name: user.display_name.clone(),
                     flags: user.flags,
                     email: user.email,
                     // TODO: pomelo related?
-                    display_name: None,
+                    display_name: user.display_name,
                     discriminator: user.discriminator,
                     // FIXME: Same as "mobile"
                     desktop: false,
@@ -424,6 +442,66 @@ pub async fn update_profile(
         }
         Err(_) => {
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct PomeloReq {
+    pub username: String,
+    pub global_name: Option<String>
+}
+
+pub async fn pomelo(
+    Extension(state): Extension<AppState>,
+    Extension(session_context): Extension<SessionContext>,
+    data: Json<PomeloReq>
+) -> impl IntoResponse {
+    let cached_legacy_username: (String, String) = (session_context.user.username.clone(), session_context.user.discriminator.clone());
+
+    let mut active_user = session_context.user.into_active_model();
+
+    let rename_check: Option<user::Model> = user::Entity::find()
+        .filter(user::Column::Username.eq(data.username.clone()))
+        .filter(user::Column::Discriminator.eq(0.to_string()))
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    match rename_check {
+        None => {
+            active_user.username = Set(data.username.clone());
+            active_user.discriminator = Set(0.to_string());
+
+            active_user.legacy_name = Set(Some(format!("{}#{}", cached_legacy_username.0, cached_legacy_username.1)));
+
+            active_user.display_name = Set(data.global_name.clone());
+
+            match active_user.update(&state.conn).await {
+                Ok(user) => {
+                    Json(User {
+                        accent_color: user.accent_color.map(|x| x.parse().unwrap()),
+                        avatar: user.avatar,
+                        avatar_decoration: user.avatar_decoration,
+                        banner: user.banner,
+                        banner_color: user.banner_colour,
+                        bio: user.bio.unwrap_or_default(),
+                        discriminator: user.discriminator,
+                        flags: user.flags,
+                        global_name: Some(user.username.clone()),
+                        id: user.id.to_string(),
+                        public_flags: Some(generate_public_flags(get_user_flags(user.flags))),
+                        username: user.username,
+                    }).into_response()
+                }
+                Err(_) => {
+                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                }
+            }
+        }
+        Some(_) => {
+            // TODO: Figure out the correct error to return if the username is already used
+            StatusCode::BAD_REQUEST.into_response()
         }
     }
 }

@@ -34,7 +34,7 @@ pub async fn dispatch_relationship_add(
                 avatar: originating_user.avatar,
                 avatar_decoration: originating_user.avatar_decoration,
                 discriminator: Some(originating_user.discriminator),
-                global_name: None,
+                global_name: originating_user.display_name.clone(),
                 id: originating_user.id.clone().to_string(),
                 public_flags: generate_public_flags(get_user_flags(originating_user.flags)),
                 username: originating_user.username,

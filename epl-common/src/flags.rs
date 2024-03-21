@@ -152,11 +152,11 @@ pub enum ApplicationFlags {
 
 #[derive(Serialize, Deserialize)]
 pub struct Badge {
-    description: String,
-    icon: String,
-    id: String,
+    pub description: String,
+    pub icon: String,
+    pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    link: Option<String>,
+    pub link: Option<String>,
 }
 
 impl From<UserFlags> for Option<Badge> {

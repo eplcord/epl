@@ -107,7 +107,7 @@ pub async fn query_cached_size_or_create(
 
                             let upload = state.aws.put_object()
                                 .bucket(options.s3_bucket)
-                                .key(format!("{bucket}/{user_id}/{file}.webp.{size}"))
+                                .key(format!("{bucket}/{user_id}/{file}.{size}"))
                                 .body(ByteStream::from(image_buffer.clone()))
                                 .send()
                                 .await;

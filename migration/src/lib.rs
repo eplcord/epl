@@ -14,6 +14,7 @@ mod m20230607_054224_rename_message_reference_in_message;
 mod m20230607_055518_add_reference_channel_id_to_message;
 mod m20231118_011903_create_mentions;
 mod m20240319_061446_create_notes;
+mod m20240321_124842_pomelo;
 
 pub struct Migrator;
 
@@ -35,6 +36,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20230607_055518_add_reference_channel_id_to_message::Migration),
             Box::new(m20231118_011903_create_mentions::Migration),
             Box::new(m20240319_061446_create_notes::Migration),
+            Box::new(m20240321_124842_pomelo::Migration),
         ]
     }
 }

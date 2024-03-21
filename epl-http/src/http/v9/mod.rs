@@ -55,7 +55,7 @@ pub fn generated_user_struct(user: user::Model) -> SharedUser {
         avatar: user.avatar,
         avatar_decoration: user.avatar_decoration,
         discriminator: Option::from(user.discriminator),
-        global_name: None,
+        global_name: user.display_name,
         id: user.id.to_string(),
         public_flags: generate_public_flags(get_user_flags(user.flags)),
         username: user.username,

@@ -39,6 +39,7 @@ pub struct RegisterRequest {
     captcha_key: Option<String>,
     gift_code_sku_id: Option<String>,
     invite: Option<String>,
+    global_name: Option<String>
 }
 
 #[derive(Serialize)]
@@ -138,7 +139,17 @@ pub async fn register(
     let mut rng: StdRng = rand::SeedableRng::from_entropy();
 
     let new_user_id = snowflake_factory.generate();
-    let new_user_discriminator: i16 = rng.gen_range(1..9999);
+    let new_user_discriminator: i16 = if options.pomelo {
+        0
+    } else {
+        rng.gen_range(1..9999)
+    };
+
+    let display_name = if data.0.global_name.clone().is_some_and(|x| !x.is_empty()) {
+        data.0.global_name
+    } else {
+        None
+    };
 
     // Check if NSFW channels should be allowed
     let nsfw_allowed = date_of_birth.unwrap().year() < (chrono::Local::now().year() - 18);
@@ -168,6 +179,8 @@ pub async fn register(
         flags: Default::default(),
         premium_since: Default::default(),
         accent_color: Default::default(),
+        display_name: Set(display_name),
+        legacy_name: Default::default(),
     };
 
     let user = create_user(&state.conn, new_user).await;

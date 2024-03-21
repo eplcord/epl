@@ -50,11 +50,11 @@ pub async fn dispatch_ready(
         mfa_enabled: user.mfa_enabled,
         id: user.id.to_string(),
         // TODO: pomelo related?
-        global_name: None,
+        global_name: user.display_name.clone(),
         flags: user.flags,
         email: user.email,
         // TODO: pomelo related?
-        display_name: None,
+        display_name: user.display_name,
         discriminator: user.discriminator,
         // FIXME: Same as "mobile"
         desktop: false,
@@ -234,14 +234,19 @@ pub async fn dispatch_ready(
             username: user.username,
             public_flags: generate_public_flags(get_user_flags(user.flags)),
             id: user.id.to_string(),
-            global_name: None,
-            display_name: None,
+            global_name: user.display_name.clone(),
             discriminator: Some(user.discriminator),
             bot: user.bot,
             avatar_decoration: user.avatar_decoration,
             avatar: user.avatar,
         })
     }
+
+    let experiments = if EplOptions::get().pomelo {
+        vec![[268309827, 0, 1, -1, 7, 1071, 0, 0]]
+    } else {
+        vec![]
+    };
 
     send_message(
         thread_data,
@@ -267,7 +272,7 @@ pub async fn dispatch_ready(
             guild_experiments: vec![],
             geo_ordered_rtc_regions: vec![],
             friend_suggestion_count: 0,
-            experiments: vec![],
+            experiments,
             country_code: String::from("US"),
             consents,
             connected_accounts: vec![],

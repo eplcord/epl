@@ -59,7 +59,7 @@ pub async fn dispatch_channel_update(thread_data: &mut ThreadData, state: &AppSt
                 avatar: user.avatar,
                 avatar_decoration: user.avatar_decoration,
                 discriminator: Some(user.discriminator),
-                global_name: None,
+                global_name: user.display_name.clone(),
                 id: user.id.to_string(),
                 public_flags: generate_public_flags(get_user_flags(user.flags)),
                 username: user.username,
