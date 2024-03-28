@@ -1,6 +1,5 @@
 use axum::Json;
 use serde::Serialize;
-use epl_common::options::{EplOptions, Options};
 
 #[derive(Serialize)]
 pub struct Experiments {

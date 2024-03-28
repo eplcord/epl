@@ -3,16 +3,24 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "mention")]
+#[sea_orm(table_name = "pin")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub message: i64,
+    pub channel: i64,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub user: i64,
+    pub message: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::channel::Entity",
+        from = "Column::Channel",
+        to = "super::channel::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    Channel,
     #[sea_orm(
         belongs_to = "super::message::Entity",
         from = "Column::Message",
@@ -21,25 +29,17 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     Message,
-    #[sea_orm(
-        belongs_to = "super::user::Entity",
-        from = "Column::User",
-        to = "super::user::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
-    )]
-    User,
+}
+
+impl Related<super::channel::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Channel.def()
+    }
 }
 
 impl Related<super::message::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Message.def()
-    }
-}
-
-impl Related<super::user::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::User.def()
     }
 }
 

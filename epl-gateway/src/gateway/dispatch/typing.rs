@@ -36,7 +36,7 @@ pub async fn dispatch_typing_start(
                     // FIXME: Implement this when guilds are a thing
                     guild_id: None,
                     user_id: user_id.to_string(),
-                    timestamp: timestamp.timestamp(),
+                    timestamp: timestamp.and_utc().timestamp(),
                     // FIXME: Implement this when guilds are a thing
                     member: None,
                 }

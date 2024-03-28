@@ -4,7 +4,6 @@ pub mod notes;
 
 use std::io;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::primitives::ByteStream;
 use crate::authorization_extractor::SessionContext;
 use crate::AppState;
@@ -14,20 +13,15 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use epl_common::database::entities::{session, user};
 use epl_common::flags::{generate_public_flags, get_user_flags, Badge, UserFlags};
-use epl_common::{nats, Stub};
-use sea_orm::{ActiveModelTrait, ColumnTrait, Cursor, DbErr, DeleteResult, EntityTrait, IntoActiveModel, QueryFilter};
+use epl_common::Stub;
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter};
 use sea_orm::ActiveValue::Set;
 use serde_derive::{Deserialize, Serialize};
-use tracing::debug;
 use epl_common::nats::Messages;
-use crate::http::v9::routes::auth::LoginReq;
 use crate::nats::send_nats_message;
 use base64::prelude::*;
 use ril::ImageFormat::WebP;
-use epl_common::database::entities::user::Model;
 use ril::prelude::*;
-use serde_json::json;
-use epl_common::database::entities;
 use epl_common::options::{EplOptions, Options};
 
 #[derive(Serialize)]

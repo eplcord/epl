@@ -15,6 +15,7 @@ mod m20230607_055518_add_reference_channel_id_to_message;
 mod m20231118_011903_create_mentions;
 mod m20240319_061446_create_notes;
 mod m20240321_124842_pomelo;
+mod m20240327_195051_create_pins;
 
 pub struct Migrator;
 
@@ -37,6 +38,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20231118_011903_create_mentions::Migration),
             Box::new(m20240319_061446_create_notes::Migration),
             Box::new(m20240321_124842_pomelo::Migration),
+            Box::new(m20240327_195051_create_pins::Migration),
         ]
     }
 }

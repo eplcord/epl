@@ -33,7 +33,11 @@ pub async fn handle_identify(thread_data: &mut ThreadData, data: Identify, state
 
     let current_gateway_state: (i64, Option<CompressionType>, EncodingType) = {
         let gateway_session_id = thread_data.gateway_state.gateway_session_id;
-        let compression_type = thread_data.gateway_state.compression.clone();
+        let compression_type = if data.compress.is_some_and(|x| x) {
+            thread_data.gateway_state.compression.clone()
+        } else {
+            None
+        };
         let encoding_type = thread_data.gateway_state.encoding.clone();
 
         (gateway_session_id, compression_type, encoding_type)

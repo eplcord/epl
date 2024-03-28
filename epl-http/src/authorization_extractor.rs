@@ -1,8 +1,9 @@
 use crate::AppState;
-use axum::http::{Request, StatusCode};
+use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::Extension;
+use axum::extract::Request;
 use epl_common::database::auth::{get_session_by_token, get_user_from_session_by_token};
 use epl_common::database::entities::{session, user};
 
@@ -12,10 +13,10 @@ pub struct SessionContext {
     pub session: session::Model,
 }
 
-pub async fn get_session_context<B>(
+pub async fn get_session_context(
     Extension(state): Extension<AppState>,
-    mut request: Request<B>,
-    next: Next<B>,
+    mut request: Request,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     let auth = request
         .headers()

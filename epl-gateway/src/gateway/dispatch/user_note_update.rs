@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use sea_orm::EntityTrait;
 use serde_derive::{Deserialize, Serialize};
 use epl_common::database::entities::note;

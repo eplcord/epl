@@ -6,7 +6,6 @@ use sea_orm::EntityTrait;
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::OnConflict;
 use serde_derive::{Deserialize, Serialize};
-use tracing::error;
 use epl_common::database::entities::note;
 use epl_common::database::entities::prelude::Note;
 use epl_common::nats::Messages::UserNoteUpdate;

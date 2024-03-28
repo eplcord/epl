@@ -17,6 +17,7 @@ use crate::http::v9::routes::users::relationships::{
 };
 use axum::routing::{delete, get, patch, post, put};
 use axum::{middleware, Router};
+use crate::http::v9::routes::tracking::science;
 use crate::http::v9::routes::users::notes::{get_notes, put_notes};
 
 pub fn assemble_routes() -> Router {
@@ -48,6 +49,7 @@ pub fn assemble_routes() -> Router {
         .route("/notes/:id", get(get_notes))
         .route("/notes/:id", put(put_notes))
         .route("/pomelo", post(pomelo))
+        .route("/devices", post(science))
         .route("/", patch(update_user));
 
     let users = Router::new()
@@ -81,4 +83,5 @@ pub fn assemble_routes() -> Router {
         .route("/experiments", get(tracking::experiments))
         .route("/science", post(tracking::science))
         .route("/track", post(tracking::science))
+        .route("/metrics", post(tracking::science))
 }

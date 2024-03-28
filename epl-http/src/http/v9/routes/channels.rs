@@ -1,6 +1,4 @@
 use std::io;
-use aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder;
-use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::primitives::ByteStream;
 use crate::authorization_extractor::SessionContext;
 use crate::AppState;
@@ -15,8 +13,6 @@ use ril::{Image, Rgba};
 use ril::ImageFormat::WebP;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Mention, Message, User};
 use serde_derive::{Deserialize, Serialize};
-
-use ril::prelude::*;
 
 use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
 use crate::nats::send_nats_message;

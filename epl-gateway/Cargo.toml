@@ -17,57 +17,57 @@ edition = "2021"
 
 [dependencies]
 ## Core
-tokio = { version = "^1.26", features = ["full"] }
+tokio = { version = "^1.36", features = ["full"] }
 epl-common = { path = "../epl-common" }
 
 ## Web
-axum = { version = "^0.6", features = ["ws", "query"] }
-tower-http = { version = "*", features = ["cors"] }
+axum = { version = "^0.7", features = ["ws"] }
+tower-http = { version = "0.5.2", features = ["cors", "fs"] }
 
-axum-client-ip = "0.4.1"
+axum-client-ip = "^0.5"
 
 ## Gateway
-tungstenite = "^0.18.0"
-tokio-tungstenite = "^0.18.0"
-axum-tungstenite = "0.2.0"
+tungstenite = "^0.21"
+tokio-tungstenite = "^0.21"
+axum-tungstenite = { version = "^0.4", git = "https://github.com/uwueviee/axum-tungstenite.git" }
 
-state = { version = "^0.5", features = ["tls"] }
+state = { version = "^0.6", features = ["tls"] }
 
-futures = "0.3.27"
-futures-channel = "0.3.28"
-futures-util = "0.3.28"
+futures = "0.3.30"
+futures-channel = "0.3.30"
+futures-util = "0.3.30"
 
 serde_eetf = "0.2.0"
-flate2 = "1.0.26"
+flate2 = "1.0.28"
 
 ## Database
-sea-orm = { version = "^0.11", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
-sea-orm-migration = "0.11.1"
+sea-orm = { version = "1.0.0-rc.3", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+sea-orm-migration = "1.0.0-rc.3"
 migration = { path = "../migration" }
 
 ## Auth
 rand = { version = "0.8.5", features = ["std_rng"] }
 
-jsonwebtoken = "8.3.0"
+jsonwebtoken = "9.3.0"
 
-blake3 = "1.3.3"
+blake3 = "1.5.1"
 argon2 = "0.5.0"
-zxcvbn = "2.2.1"
+zxcvbn = "2.2.2"
 
 ## Data
-serde = { version = "1.0.156", features = ["derive"] }
-serde_derive = { version = "1.0.156" }
-serde_json = "1.0.94"
-serde_repr = "0.1.11"
-serde_with = "2.3.1"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_derive = { version = "1.0.197" }
+serde_json = "1.0.115"
+serde_repr = "0.1.18"
+serde_with = "3.7.0"
 
-chrono = "0.4.24"
+chrono = "0.4.37"
 
 ## NATS Wire Protocol
-rmp-serde = "1.1.1"
+rmp-serde = "1.1.2"
 
 ## Misc
-tracing = "0.1.37"
-tracing-subscriber = "0.3.16"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 
-async-nats = "0.29.0"
+async-nats = "0.34.0"
