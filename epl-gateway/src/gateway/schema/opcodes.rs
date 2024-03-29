@@ -1,12 +1,12 @@
 use crate::gateway::dispatch::DispatchTypes;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use tracing::debug;
+use tracing::{debug};
 
 use crate::gateway::schema::hello::Hello;
-use crate::gateway::schema::identify::Identify;
 use crate::gateway::schema::presence::Presence;
 use crate::gateway::schema::GatewayMessage;
+use crate::gateway::schema::identify::Identify;
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone, Default)]
 #[repr(u8)]
@@ -29,7 +29,7 @@ pub enum GatewayData {
         #[serde(flatten)]
         data: Box<DispatchTypes>,
     },
-    Heartbeat(i32),
+    Heartbeat(u64),
     Identify(Box<Identify>),
     PresenceUpdate(Box<Presence>),
     Hello(Box<Hello>),
@@ -37,12 +37,18 @@ pub enum GatewayData {
 
 pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
     debug!("Decoding message: {}", &msg);
+
+    // TODO: Figure out a less error-prone way of doing this, probably via custom deserialization
     let message_json: Result<GatewayMessage, serde_json::Error> = serde_json::from_str(&msg);
 
-    if let Ok(..) = message_json {
+    if message_json.is_ok() {
         let output = message_json.unwrap();
 
         debug!("Decoded as Op: {:?}", &output.op);
+
+        if output.d.is_none() {
+            return Err(());
+        }
 
         Ok((output.op, output.d.unwrap()))
     } else {
