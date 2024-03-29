@@ -17,6 +17,7 @@ use crate::http::v9::routes::users::relationships::{
 };
 use axum::routing::{delete, get, patch, post, put};
 use axum::{middleware, Router};
+use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
 use crate::http::v9::routes::tracking::science;
 use crate::http::v9::routes::users::notes::{get_notes, put_notes};
 
@@ -41,20 +42,20 @@ pub fn assemble_routes() -> Router {
     let atme = Router::new()
         .route("/relationships", get(get_all_relationships))
         .route("/relationships", post(new_relationship))
-        .route("/relationships/:id", delete(delete_relationship))
-        .route("/relationships/:id", put(modify_relationship))
+        .route("/relationships/:user_id", delete(delete_relationship))
+        .route("/relationships/:user_id", put(modify_relationship))
         .route("/channels", post(new_dm_channel))
         .route("/disable", post(disable_account))
         .route("/profile", patch(update_profile))
-        .route("/notes/:id", get(get_notes))
-        .route("/notes/:id", put(put_notes))
+        .route("/notes/:user_id", get(get_notes))
+        .route("/notes/:user_id", put(put_notes))
         .route("/pomelo", post(pomelo))
         .route("/devices", post(science))
         .route("/", patch(update_user));
 
     let users = Router::new()
         .nest("/@me", atme)
-        .route("/:id/profile", get(profile))
+        .route("/:user_id/profile", get(profile))
         // Workaround
         .route("/%40me/profile", patch(update_profile))
         .route_layer(middleware::from_fn(get_session_context));
@@ -65,14 +66,17 @@ pub fn assemble_routes() -> Router {
         .route_layer(middleware::from_fn(get_session_context));
 
     let channels = Router::new()
-        .route("/:id/messages/:id", patch(edit_message))
-        .route("/:id/messages/:id", delete(delete_message))
-        .route("/:id/messages", get(get_messages))
-        .route("/:id/messages", post(send_message))
-        .route("/:id/typing", post(typing))
-        .route("/:id/recipients/:id", put(add_user_to_channel))
-        .route("/:id/recipients/:id", delete(remove_user_from_channel))
-        .route("/:id", patch(modify_channel))
+        .route("/:channel_id/messages/:message_id", patch(edit_message))
+        .route("/:channel_id/messages/:message_id", delete(delete_message))
+        .route("/:channel_id/messages", get(get_messages))
+        .route("/:channel_id/messages", post(send_message))
+        .route("/:channel_id/typing", post(typing))
+        .route("/:channel_id/recipients/:user_id", put(add_user_to_channel))
+        .route("/:channel_id/recipients/:user_id", delete(remove_user_from_channel))
+        .route("/:channel_id/pins", get(get_pins))
+        .route("/:channel_id/pins/:message_id", put(new_pin))
+        .route("/:channel_id/pins/:message_id", delete(delete_pin))
+        .route("/:channel_id", patch(modify_channel))
         .route_layer(middleware::from_fn(get_session_context));
 
     Router::new()

@@ -1,4 +1,3 @@
-use chrono::Utc;
 use sea_orm::{DatabaseConnection, EntityTrait};
 use crate::gateway::schema::{generated_user_struct, SharedUser};
 use epl_common::Stub;
@@ -48,7 +47,8 @@ pub fn generate_message_struct(
     message: message::Model,
     author: Option<user::Model>,
     ref_message: Option<(message::Model, Option<user::Model>)>,
-    mentions: Vec<user::Model>
+    mentions: Vec<user::Model>,
+    pinned: bool
 ) -> SharedMessage {
     SharedMessage {
         attachments: vec![],
@@ -56,7 +56,7 @@ pub fn generate_message_struct(
         channel_id: message.channel_id.to_string(),
         components: vec![],
         content: message.content,
-        edited_timestamp: message.edited_timestamp.map(|e| e.and_local_timezone(Utc).unwrap().to_string()),
+        edited_timestamp: message.edited_timestamp.map(|e| e.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string()),
         embeds: vec![],
         flags: message.flags.unwrap_or(0),
         id: message.id.to_string(),
@@ -72,13 +72,13 @@ pub fn generate_message_struct(
             None
         },
         nonce: message.nonce,
-        pinned: message.pinned,
+        pinned,
         referenced_message: if let Some(ref_message) = ref_message {
-            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![])))
+            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![], false)))
         } else {
             None
         },
-        timestamp: message.timestamp.and_local_timezone(Utc).unwrap().to_string(),
+        timestamp: message.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
         tts: message.tts,
         _type: message.r#type,
     }

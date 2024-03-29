@@ -130,7 +130,7 @@ pub async fn dispatch_ready(
         relationships.push(RelationshipReady {
             user_id: i.peer.to_string(),
             _type: i.relationship_type,
-            since: i.timestamp.to_string(),
+            since: i.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             nickname: None,
             id: i.peer.to_string(),
         });
@@ -150,7 +150,7 @@ pub async fn dispatch_ready(
         relationships.push(RelationshipReady {
             user_id: i.creator.to_string(),
             _type: normalized_type,
-            since: i.timestamp.to_string(),
+            since: i.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             nickname: None,
             id: i.creator.to_string(),
         });

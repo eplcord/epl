@@ -23,6 +23,11 @@ impl MigrationTrait for Migration {
                             .big_integer()
                             .not_null()
                     )
+                    .col(
+                        ColumnDef::new(Pin::Timestamp)
+                            .date_time()
+                            .not_null()
+                    )
                     .primary_key(
                         Index::create()
                             .col(Pin::Channel)
@@ -58,4 +63,5 @@ enum Pin {
     Table,
     Channel,
     Message,
+    Timestamp
 }

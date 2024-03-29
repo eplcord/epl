@@ -92,6 +92,15 @@ pub enum Messages {
     },
     ChannelUpdate {
         channel_id: i64
+    },
+    ChannelPinsUpdate {
+        channel_id: i64
+    },
+    ChannelPinsAck {
+        channel_id: i64,
+    },
+    MessageAck {
+        message_id: i64,
     }
 }
 

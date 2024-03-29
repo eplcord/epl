@@ -378,7 +378,7 @@ pub async fn sessions(
         .into_iter()
         .map(|session| Session {
             id_hash: session.session_id,
-            approx_last_used_time: session.last_used.to_string(),
+            approx_last_used_time: session.last_used.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             client_info: ClientInfo {
                 os: session.os.unwrap_or(String::from("Unknown")),
                 platform: session.platform.unwrap_or(String::from("Unknown")),

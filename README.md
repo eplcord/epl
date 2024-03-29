@@ -39,6 +39,7 @@ Epl is at a point where basic account and messaging features work, this includes
   * Creating and receiving messages
   * Deleting messages
   * Editing already sent messages
+  * Pinning messages
 * DMs and Group DMs
   * Creating and closing DMs
   * Adding and kicking users in Group DMs
@@ -53,7 +54,6 @@ Epl is at a point where basic account and messaging features work, this includes
   * Badges
 
 Some things I'm definitely adding Eventually™ are:
-* Message pinning
 * Reactions
 * Mutual friends list
 * Presence

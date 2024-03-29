@@ -57,7 +57,7 @@ pub async fn get_all_relationships(
         output.push(RelationshipRes {
             id: user.id.to_string(),
             nickname: None,
-            since: i.timestamp.to_string(),
+            since: i.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             _type: i.relationship_type,
             user: generated_user_struct(user),
         })
@@ -81,7 +81,7 @@ pub async fn get_all_relationships(
         output.push(RelationshipRes {
             id: user.id.to_string(),
             nickname: None,
-            since: i.timestamp.to_string(),
+            since: i.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             _type: normalized_type,
             user: generated_user_struct(user),
         })

@@ -80,6 +80,7 @@ pub async fn handle_identify(thread_data: &mut ThreadData, data: Identify, state
         intents: Some(0),
         compression: current_gateway_state.1,
         encoding: current_gateway_state.2,
+        sequence: 2,
     };
     thread_data.gateway_state = gateway_state;
 

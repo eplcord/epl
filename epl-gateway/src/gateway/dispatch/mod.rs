@@ -5,7 +5,7 @@ use std::mem;
 use axum_tungstenite::Message;
 
 use crate::fragmented_write::two_frame_fragmentaion;
-use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove};
+use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelPinsAck, ChannelPinsUpdate, ChannelRecipientAdd, ChannelRecipientRemove};
 use crate::gateway::schema::error_codes::ErrorCode;
 use crate::gateway::schema::message::{MessageDelete, SharedMessage};
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
@@ -29,7 +29,6 @@ pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
 pub(crate) mod typing;
 pub(crate) mod user_note_update;
-
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum DispatchTypes {
@@ -46,7 +45,9 @@ pub enum DispatchTypes {
     TypingStart(TypingStart),
     ChannelRecipientAdd(ChannelRecipientAdd),
     ChannelRecipientRemove(ChannelRecipientRemove),
-    UserNoteUpdate(UserNoteUpdate)
+    UserNoteUpdate(UserNoteUpdate),
+    ChannelPinsUpdate(ChannelPinsUpdate),
+    ChannelPinsAck(ChannelPinsAck)
 }
 
 impl From<DispatchTypes> for String {
@@ -66,6 +67,8 @@ impl From<DispatchTypes> for String {
             DispatchTypes::ChannelRecipientAdd(_) => String::from("CHANNEL_RECIPIENT_ADD"),
             DispatchTypes::ChannelRecipientRemove(_) => String::from("CHANNEL_RECIPIENT_REMOVE"),
             DispatchTypes::UserNoteUpdate(_) => String::from("USER_NOTE_UPDATE"),
+            DispatchTypes::ChannelPinsUpdate(_) => String::from("CHANNEL_PINS_UPDATE"),
+            DispatchTypes::ChannelPinsAck(_) => String::from("CHANNEL_PINS_ACK")
         }
     }
 }
@@ -82,6 +85,12 @@ pub fn assemble_dispatch(t: DispatchTypes) -> GatewayMessage {
 pub async fn send_message(thread_data: &mut ThreadData, message: GatewayMessage) {
     let mut enforced_zlib = false;
     let mut streamed_compression = false;
+    let mut message = message.clone();
+    
+    message.s = Some(thread_data.gateway_state.sequence);
+    
+    // Bump the sequence number after setting it
+    thread_data.gateway_state.sequence += 1;
 
     // Large messages always have to be compressed
     if mem::size_of_val(&message) > 8192 {

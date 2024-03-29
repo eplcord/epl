@@ -98,6 +98,7 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
             .encoding
             .parse::<EncodingType>()
             .expect("Invalid encoding type requested!"),
+        sequence: 1,
     };
 
     let mut thread_data = ThreadData {
@@ -119,7 +120,7 @@ async fn handle_socket(mut rawsocket: WebSocket, addr: IpAddr, state: AppState, 
             d: Some(GatewayData::Hello(Box::from(Hello {
                 heartbeat_interval: 10000,
             }))),
-            s: None,
+            s: Some(0),
             t: None,
         },
     )

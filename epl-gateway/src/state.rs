@@ -61,6 +61,7 @@ pub struct GatewayState {
     pub(crate) intents: Option<i8>,
     pub(crate) compression: Option<CompressionType>,
     pub(crate) encoding: EncodingType,
+    pub(crate) sequence: i64
 }
 
 pub struct ThreadData {

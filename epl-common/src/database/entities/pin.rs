@@ -9,6 +9,7 @@ pub struct Model {
     pub channel: i64,
     #[sea_orm(primary_key, auto_increment = false)]
     pub message: i64,
+    pub timestamp: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

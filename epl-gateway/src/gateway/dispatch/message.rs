@@ -4,7 +4,7 @@ use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::database::entities::prelude::{Mention, Message, User};
 
-use epl_common::database::entities::{mention, message, user};
+use epl_common::database::entities::{mention, message, pin, user};
 use sea_orm::prelude::*;
 
 pub enum DispatchMessageTypes {
@@ -51,11 +51,21 @@ pub async fn dispatch_message(thread_data: &mut ThreadData, state: &AppState, di
         mentioned_users.push(user.unwrap());
     }
 
+    let pinned = if let Some(_) = pin::Entity::find_by_id((message.channel_id, message.id))
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!") {
+        true
+    } else {
+        false
+    };
+
     let dispatch = generate_message_struct(
         message,
         message_author,
         refed_message,
         mentioned_users,
+        pinned
     );
 
     send_message(

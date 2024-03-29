@@ -1,12 +1,12 @@
 use crate::state::ThreadData;
 use crate::AppState;
-use epl_common::database::entities::{channel, channel_member, message, user};
+use epl_common::database::entities::{channel, channel_member, message, pin, user};
 
 use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
-use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove};
+use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelPinsAck, ChannelPinsUpdate, ChannelRecipientAdd, ChannelRecipientRemove};
 use crate::gateway::schema::{generated_user_struct, SharedUser};
 use epl_common::channels::ChannelTypes;
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, User};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, Pin, User};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use sea_orm::prelude::*;
 use sea_orm::QueryOrder;
@@ -184,5 +184,72 @@ pub async fn dispatch_channel_recipient_update(
                 ))
             }
         }
+    ).await;
+}
+
+pub async fn dispatch_channel_pins_update(
+    thread_data: &mut ThreadData,
+    state: &AppState,
+    channel_id: i64,
+) {
+    let channel: channel::Model = Channel::find_by_id(channel_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .expect("Channel requested by internal NATS missing!");
+
+    let latest_pin: Option<pin::Model> = Pin::find()
+        .filter(pin::Column::Channel.eq(channel.id))
+        .order_by_desc(pin::Column::Timestamp)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!");
+
+    send_message(
+        thread_data,
+        match latest_pin {
+            None => {
+                assemble_dispatch(DispatchTypes::ChannelPinsUpdate(
+                    ChannelPinsUpdate {
+                        last_pin_timestamp: None,
+                        channel_id: channel.id.to_string(),
+                        guild_id: channel.guild_id.map(|x| x.to_string()),
+                    }
+                ))
+            }
+            Some(pin) => {
+                assemble_dispatch(DispatchTypes::ChannelPinsUpdate(
+                    ChannelPinsUpdate {
+                        last_pin_timestamp: Some(pin.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string()),
+                        channel_id: channel.id.to_string(),
+                        guild_id: channel.guild_id.map(|x| x.to_string()),
+                    }
+                ))
+            }
+        }
+    ).await;
+}
+
+pub async fn dispatch_channel_pins_ack(
+    thread_data: &mut ThreadData,
+    state: &AppState,
+    channel_id: i64,
+) {
+    let channel: channel::Model = Channel::find_by_id(channel_id)
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .expect("Channel requested by internal NATS missing!");
+
+    send_message(
+        thread_data,
+        assemble_dispatch(DispatchTypes::ChannelPinsAck(
+            ChannelPinsAck {
+                timestamp: chrono::Utc::now().naive_utc().and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
+                channel_id: channel.id.to_string(),
+                guild_id: channel.guild_id.map(|x| x.to_string()),
+                version: chrono::Utc::now().naive_utc().and_utc().timestamp_millis(),
+            }
+        ))
     ).await;
 }

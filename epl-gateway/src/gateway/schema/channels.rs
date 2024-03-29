@@ -58,3 +58,21 @@ pub struct ChannelRecipientRemove {
     pub channel_id: String,
     pub user: SharedUser,
 }
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ChannelPinsUpdate {
+    #[serialize_always]
+    pub last_pin_timestamp: Option<String>,
+    pub channel_id: String,
+    pub guild_id: Option<String>,
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ChannelPinsAck {
+    pub timestamp: String,
+    pub channel_id: String,
+    pub guild_id: Option<String>,
+    pub version: i64
+}

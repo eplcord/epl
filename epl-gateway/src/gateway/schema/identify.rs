@@ -29,6 +29,9 @@ pub struct Properties {
     pub release_channel: Option<String>,
     pub system_locale: Option<String>,
     pub window_manager: Option<String>,
+    pub device: Option<String>,
+    pub device_vendor_id: Option<String>,
+    pub design_id: Option<i32>
 }
 
 #[derive(Serialize, Deserialize, Clone)]
