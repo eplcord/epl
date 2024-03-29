@@ -1,4 +1,4 @@
-use axum::body::StreamBody;
+use axum::body::Body;
 use axum::Extension;
 use axum::extract::{Path};
 use axum::http::{header, StatusCode};
@@ -25,7 +25,7 @@ pub async fn badge_icons(
         Ok(object) => {
             let stream = ReaderStream::new(object.body.into_async_read());
 
-            let body = StreamBody::new(stream);
+            let body = Body::from_stream(stream);
 
             let headers = [
                 // TODO: detect this and fix this :)
@@ -35,7 +35,7 @@ pub async fn badge_icons(
 
             (headers, body).into_response()
         }
-        Err(e) => {
+        Err(_) => {
             StatusCode::NOT_FOUND.into_response()
         }
     }

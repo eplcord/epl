@@ -3,7 +3,7 @@ mod channel_icons;
 mod badge_icons;
 
 use aws_sdk_s3::primitives::ByteStream;
-use axum::body::StreamBody;
+use axum::body::Body;
 use axum::http::{header, StatusCode};
 use axum::response::IntoResponse;
 use axum::Router;
@@ -47,7 +47,7 @@ async fn get_image_or(
         Ok(object) => {
             let stream = ReaderStream::new(object.body.into_async_read());
 
-            let body = StreamBody::new(stream);
+            let body = Body::from_stream(stream);
 
             let headers = [
                 // TODO: detect this and fix this :)

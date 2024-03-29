@@ -3,8 +3,8 @@ mod buckets;
 use std::env;
 use std::net::SocketAddr;
 use aws_sdk_s3::Client;
-use axum::http::Method;
 use axum::{Extension, Router};
+use axum::http::Method;
 use axum::routing::get;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
@@ -95,10 +95,12 @@ async fn main() {
         .parse()
         .expect("Unable to parse listen address!");
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .expect("Failed to start the server!");
+    let listener = tokio::net::TcpListener::bind(&addr).await.expect("Failed to bind to address!");
+
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>()
+    ).await.expect("Failed to start the server!");
 }
 
 #[derive(Clone)]
