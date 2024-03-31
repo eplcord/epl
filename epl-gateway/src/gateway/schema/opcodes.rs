@@ -1,7 +1,7 @@
 use crate::gateway::dispatch::DispatchTypes;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use tracing::{debug};
+use tracing::{debug, error};
 
 use crate::gateway::schema::hello::Hello;
 use crate::gateway::schema::presence::Presence;
@@ -52,6 +52,7 @@ pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
 
         Ok((output.op, output.d.unwrap()))
     } else {
+        error!("{:?}", message_json.err());
         Err(())
     }
 }

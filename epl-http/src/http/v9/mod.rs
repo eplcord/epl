@@ -1,7 +1,8 @@
 use sea_orm::{DatabaseConnection, EntityTrait};
-use epl_common::database::entities::{message, user};
+use epl_common::database::entities::{embed, message, user};
 use epl_common::Stub;
 use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 use epl_common::database::entities::prelude::{Message, User};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 
@@ -27,7 +28,7 @@ pub struct SharedMessage {
     components: Vec<Stub>,
     content: String,
     edited_timestamp: Option<String>,
-    embeds: Vec<Stub>,
+    embeds: Vec<Value>,
     flags: i32,
     id: String,
     mention_everyone: bool,
@@ -66,7 +67,8 @@ pub fn generate_message_struct(
     author: Option<user::Model>,
     ref_message: Option<(message::Model, Option<user::Model>)>,
     mentions: Vec<user::Model>,
-    pinned: bool
+    pinned: bool,
+    embeds: Vec<embed::Model>
 ) -> SharedMessage {
     SharedMessage {
         attachments: vec![],
@@ -75,7 +77,7 @@ pub fn generate_message_struct(
         components: vec![],
         content: message.content,
         edited_timestamp: message.edited_timestamp.map(|e| e.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string()),
-        embeds: vec![],
+        embeds: embeds.iter().map(|x| x.content.clone()).collect(),
         flags: message.flags.unwrap_or(0),
         id: message.id.to_string(),
         mention_everyone: message.mention_everyone,
@@ -92,7 +94,7 @@ pub fn generate_message_struct(
         nonce: message.nonce,
         pinned,
         referenced_message: if let Some(ref_message) = ref_message {
-            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![], false)))
+            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![], false, vec![])))
         } else {
             None
         },

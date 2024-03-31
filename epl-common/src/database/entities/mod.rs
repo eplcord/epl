@@ -4,6 +4,7 @@ pub mod prelude;
 
 pub mod channel;
 pub mod channel_member;
+pub mod embed;
 pub mod mention;
 pub mod message;
 pub mod note;

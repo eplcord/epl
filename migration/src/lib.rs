@@ -16,6 +16,7 @@ mod m20231118_011903_create_mentions;
 mod m20240319_061446_create_notes;
 mod m20240321_124842_pomelo;
 mod m20240327_195051_create_pins;
+mod m20240331_060215_create_embeds;
 
 pub struct Migrator;
 
@@ -39,6 +40,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240319_061446_create_notes::Migration),
             Box::new(m20240321_124842_pomelo::Migration),
             Box::new(m20240327_195051_create_pins::Migration),
+            Box::new(m20240331_060215_create_embeds::Migration),
         ]
     }
 }

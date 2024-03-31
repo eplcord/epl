@@ -13,7 +13,7 @@ use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
 use ril::{Image, Rgba};
 use ril::ImageFormat::WebP;
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Mention, Message, User};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, Mention, Message, User};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
@@ -130,8 +130,10 @@ pub async fn get_messages(
                 } else {
                     false
                 };
+                
+                let embeds = i.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
 
-                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users, pinned));
+                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users, pinned, embeds));
             }
 
             (StatusCode::OK, Json(GetMessageRes(output))).into_response()
@@ -287,7 +289,8 @@ pub async fn send_message(
                     Some(session_context.user),
                     refed_message,
                     mention_results,
-                    false
+                    false,
+                    vec![]
                 )),
             )
                 .into_response()
@@ -391,6 +394,8 @@ pub async fn edit_message(
                 false
             };
 
+            let embeds = requested_message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
+
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
@@ -398,7 +403,8 @@ pub async fn edit_message(
                     Some(session_context.user),
                     refed_message,
                     mentioned_users,
-                    pinned
+                    pinned,
+                    embeds
                 )),
             )
                 .into_response()

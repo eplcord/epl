@@ -42,6 +42,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Channel1,
+    #[sea_orm(has_many = "super::embed::Entity")]
+    Embed,
     #[sea_orm(has_many = "super::mention::Entity")]
     Mention,
     #[sea_orm(
@@ -62,6 +64,12 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     User,
+}
+
+impl Related<super::embed::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Embed.def()
+    }
 }
 
 impl Related<super::mention::Entity> for Entity {

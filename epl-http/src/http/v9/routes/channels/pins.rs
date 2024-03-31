@@ -6,7 +6,7 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter, QueryOrder};
 use tracing::error;
 use epl_common::database::entities::{mention, message, pin, user};
-use epl_common::database::entities::prelude::{Channel, Mention, Message, Pin, User};
+use epl_common::database::entities::prelude::{Channel, Embed, Mention, Message, Pin, User};
 use epl_common::messages::MessageTypes;
 use epl_common::nats::Messages::{ChannelPinsAck, ChannelPinsUpdate, MessageCreate, MessageUpdate};
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
@@ -283,7 +283,9 @@ pub async fn get_pins(
                             }
                         }
 
-                        pins.push(generate_message_struct(message, author, refed_message, mentioned_users, true));
+                        let embeds = message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
+
+                        pins.push(generate_message_struct(message, author, refed_message, mentioned_users, true, embeds));
                     }
                 }
             }
