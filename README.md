@@ -53,14 +53,20 @@ Epl is at a point where basic account and messaging features work, this includes
   * Group icons
   * Badges
 
-Some things I'm definitely adding Eventually™ are:
-* Reactions
+Some stuff in progress:
 * Mutual friends list
+* Admin api
+  * Ignoring the guild paths for now
+* Media proxy
+* Reactions
+* Mobile support
+  * Turns out its incredibly easy to get the React Native Discord client to change its endpoints
+    * It also uses `window.GLOBAL_ENV` when starting and only requests an uncompressed JSON gateway
+
+Some things I'm definitely adding Eventually™ are:
 * Presence
 * Guilds
-* Media proxy
 * Attachments
-* Admin api
 * Settings sync
 * Favourite gifs
 * Threads
@@ -78,9 +84,9 @@ Things that at some point I want to add:
 * Profile effects
 * v1/v3/v6 api support (Help with getting structs for these older versions would be nice)
 * Voice support
+* Fragmented compression and ETF gateway support
 
 I probably won't implement these without external help:
-* Mobile support
 * Console support
 * Spotify listen along or other spotify features
 * Federation
