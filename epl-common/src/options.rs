@@ -1,6 +1,7 @@
 use std::env;
 
 // TODO: Make this better lol
+#[derive(Clone)]
 pub struct EplOptions {
     pub name: String,
     pub description: String,

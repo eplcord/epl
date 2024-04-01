@@ -18,7 +18,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, Query
 use sea_orm::ActiveValue::Set;
 use serde_derive::{Deserialize, Serialize};
 use epl_common::nats::Messages;
-use crate::nats::send_nats_message;
+use epl_common::nats::send_nats_message;
 use base64::prelude::*;
 use ril::ImageFormat::WebP;
 use ril::prelude::*;

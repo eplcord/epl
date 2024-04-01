@@ -24,6 +24,9 @@ static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
 pub static USER_MENTION_REGEX: Lazy<regex::Regex> =
     Lazy::new(|| regex::Regex::new(r"<@!?(\d+)>").unwrap());
 
+pub static URL_REGEX: Lazy<regex::Regex> =
+    Lazy::new(|| regex::Regex::new(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)").unwrap());
+
 pub fn gen_token() -> String {
     blake3::hash(
         Alphanumeric

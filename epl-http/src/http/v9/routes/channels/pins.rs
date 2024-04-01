@@ -14,7 +14,7 @@ use epl_common::rustflake::Snowflake;
 use crate::AppState;
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage};
-use crate::nats::send_nats_message;
+use epl_common::nats::send_nats_message;
 
 pub async fn new_pin(
     Extension(state): Extension<AppState>,

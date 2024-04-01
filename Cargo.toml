@@ -5,5 +5,7 @@ members = [
     "epl-gateway",
     "epl-common",
     "migration",
-    "epl-cdn"
+    "epl-cdn",
+    "epl-admin",
+    "epl-worker"
 ]

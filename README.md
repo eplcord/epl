@@ -52,12 +52,17 @@ Epl is at a point where basic account and messaging features work, this includes
   * User avatars
   * Group icons
   * Badges
+* Media proxy
+  * Need to improve URL matching (don't match urls in codeblocks or surrounded by less/greater than signs)
+  * External images don't embed, need to look what to do here as Mediaproxy doesn't send anything
+  * Some sites break Mediaproxy (like Discord!)
+  * Missing elements cause embeds to not show up on mobile
 
 Some stuff in progress:
 * Mutual friends list
 * Admin api
   * Ignoring the guild paths for now
-* Media proxy
+
 * Reactions
 * Mobile support
   * Turns out its incredibly easy to get the React Native Discord client to change its endpoints

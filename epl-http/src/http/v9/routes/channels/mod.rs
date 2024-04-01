@@ -17,17 +17,18 @@ use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, Men
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
-use crate::nats::send_nats_message;
+use epl_common::nats::send_nats_message;
 use epl_common::database::entities::{channel_member, mention, message, pin, user};
 use epl_common::messages::MessageTypes;
-use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, TypingStarted};
+use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, ProcessEmbed, TypingStarted};
 use epl_common::rustflake::Snowflake;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
+use url::Url;
 use epl_common::channels::ChannelTypes;
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
 use epl_common::relationship::get_relationship;
-use epl_common::{RelationshipType, USER_MENTION_REGEX};
+use epl_common::{RelationshipType, URL_REGEX, USER_MENTION_REGEX};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::nats::Messages;
 use epl_common::options::{EplOptions, Options};
@@ -149,6 +150,7 @@ pub struct SendMessageReq {
     tts: bool,
     message_reference: Option<SharedMessageReference>,
     allowed_mentions: Option<AllowedMentions>,
+    mobile_network_type: Option<String>
 }
 
 #[derive(Deserialize)]
@@ -281,6 +283,22 @@ pub async fn send_message(
                 MessageCreate { id: snowflake },
             )
                 .await;
+
+            if EplOptions::get().mediaproxy_url.is_some() {
+                for i in URL_REGEX.captures_iter(&new_message.content) {
+                    let url = Url::parse(i.get(0).unwrap().as_str());
+
+                    if url.is_err() {
+                        continue;
+                    }
+
+                    send_nats_message(
+                        &state.nats_client,
+                        "worker_queue".to_string(),
+                        ProcessEmbed { message_id: new_message.id }
+                    ).await;
+                }
+            }
 
             (
                 StatusCode::OK,

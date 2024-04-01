@@ -15,7 +15,7 @@ use epl_common::database::entities::{prelude::*, *};
 
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{throw_http_error, APIErrorCode, APIErrorField, APIErrorMessage};
-use crate::nats::send_nats_message;
+use epl_common::nats::send_nats_message;
 use crate::AppState;
 use epl_common::database::auth::{
     create_user, generate_password_hash, generate_session, get_all_sessions, get_session_by_id,

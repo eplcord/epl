@@ -10,7 +10,7 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::IntoActiveModel;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::nats::send_nats_message;
+use epl_common::nats::send_nats_message;
 use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::nats::Messages::ChannelCreate;

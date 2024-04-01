@@ -1,3 +1,4 @@
+use tracing::log::{debug, error};
 use crate::gateway::dispatch::channel::{ChannelRecipientUpdateType, dispatch_channel_update, dispatch_channel_delete, dispatch_channel_recipient_update, ChannelTypeUpdate, dispatch_channel_pins_update, dispatch_channel_pins_ack};
 use crate::gateway::dispatch::message::{dispatch_message, dispatch_message_delete, DispatchMessageTypes};
 use crate::gateway::dispatch::relationships::{
@@ -74,6 +75,9 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::MessageAck { message_id } => {
             // TODO
+        }
+        _ => {
+            error!("Unsupported message received!");
         }
     }
 }

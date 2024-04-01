@@ -12,7 +12,7 @@ use epl_common::nats::Messages::UserNoteUpdate;
 use crate::AppState;
 use crate::authorization_extractor::SessionContext;
 use crate::http::v9::errors::{APIErrorCode, throw_http_error};
-use crate::nats::send_nats_message;
+use epl_common::nats::send_nats_message;
 
 #[derive(Serialize)]
 pub struct GetNoteRes {

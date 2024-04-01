@@ -1,6 +1,7 @@
 use chrono::NaiveDateTime;
 use crate::RelationshipType;
 use serde_derive::{Deserialize, Serialize};
+use async_nats::client::Client;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "t", content = "c")]
@@ -101,6 +102,9 @@ pub enum Messages {
     },
     MessageAck {
         message_id: i64,
+    },
+    ProcessEmbed {
+        message_id: i64,
     }
 }
 
@@ -119,4 +123,16 @@ pub struct NatsKV {
     pub current_shard: Option<i8>,
     pub shard_count: Option<i8>,
     pub intents: Option<i8>,
+}
+
+pub async fn send_nats_message(nats_client: &Client, subject: String, message: Messages) {
+    nats_client
+        .publish(
+            subject,
+            serde_json::to_vec(&message)
+                .expect("Failed to parse message into json!")
+                .into(),
+        )
+        .await
+        .expect("Failed to send NATS message!");
 }

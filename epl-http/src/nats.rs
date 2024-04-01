@@ -1,19 +1,7 @@
 use crate::AppState;
-use async_nats::Client;
+use epl_common::nats;
 use epl_common::nats::Messages;
 use epl_common::RelationshipType::{Blocked, Friend, Incoming, Outgoing};
-
-pub async fn send_nats_message(nats_client: &Client, subject: String, message: Messages) {
-    nats_client
-        .publish(
-            subject,
-            serde_json::to_vec(&message)
-                .expect("Failed to parse message into json!")
-                .into(),
-        )
-        .await
-        .expect("Failed to send NATS message!");
-}
 
 pub enum RelationshipUpdate {
     Create,
@@ -30,7 +18,7 @@ pub async fn send_relationship_update(
 ) {
     match instruction {
         RelationshipUpdate::Create => {
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 creator.to_string(),
                 Messages::RelationshipAdd {
@@ -40,7 +28,7 @@ pub async fn send_relationship_update(
             )
             .await;
 
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 peer.to_string(),
                 Messages::RelationshipAdd {
@@ -51,7 +39,7 @@ pub async fn send_relationship_update(
             .await;
         }
         RelationshipUpdate::Remove => {
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 creator.to_string(),
                 Messages::RelationshipRemove {
@@ -61,7 +49,7 @@ pub async fn send_relationship_update(
             )
             .await;
 
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 peer.to_string(),
                 Messages::RelationshipRemove {
@@ -72,7 +60,7 @@ pub async fn send_relationship_update(
             .await;
         }
         RelationshipUpdate::Block => {
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 creator.to_string(),
                 Messages::RelationshipAdd {
@@ -83,7 +71,7 @@ pub async fn send_relationship_update(
             .await;
         }
         RelationshipUpdate::Accept => {
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 creator.to_string(),
                 Messages::RelationshipAdd {
@@ -93,7 +81,7 @@ pub async fn send_relationship_update(
             )
             .await;
 
-            send_nats_message(
+            nats::send_nats_message(
                 &state.nats_client,
                 peer.to_string(),
                 Messages::RelationshipAdd {
