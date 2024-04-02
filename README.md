@@ -57,6 +57,8 @@ Epl is at a point where basic account and messaging features work, this includes
   * External images don't embed, need to look what to do here as Mediaproxy doesn't send anything
   * Some sites break Mediaproxy (like Discord!)
   * Missing elements cause embeds to not show up on mobile
+* April Fools
+  * 2024 implemented minus the avatar deco (Enable the Packages experiment to access)
 
 Some stuff in progress:
 * Mutual friends list

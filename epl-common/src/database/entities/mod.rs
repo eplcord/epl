@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod april_fools2024;
 pub mod channel;
 pub mod channel_member;
 pub mod embed;
