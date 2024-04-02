@@ -31,11 +31,12 @@ pub async fn process_embed(state: &AppState, message_id: i64) {
 
         let captured_url = url.unwrap();
 
-        let call_url = format!("https://{}/embed/{}/{}/{}",
+        let call_url = format!("https://{}/embed/{}/{}{}?{}",
             state.options.mediaproxy_url.clone().unwrap(),
             captured_url.scheme(),
             captured_url.host_str().unwrap(),
-            captured_url.path()
+            captured_url.path(),
+            captured_url.query().unwrap_or_default()
         );
 
         match ureq::get(&call_url).call() {

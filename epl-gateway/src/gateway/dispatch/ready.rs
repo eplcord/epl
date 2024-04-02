@@ -58,7 +58,7 @@ pub async fn dispatch_ready(
         discriminator: user.discriminator,
         // FIXME: Same as "mobile"
         desktop: false,
-        bio: user.bio.unwrap_or(String::new()),
+        bio: user.bio.unwrap_or_default(),
         banner_color: user.banner_colour,
         banner: user.banner,
         avatar_decoration: user.avatar_decoration,
@@ -88,8 +88,8 @@ pub async fn dispatch_ready(
             session_id: session.session_id,
             client_info: SessionClientInfo {
                 version: 0,
-                os: session.os.unwrap_or(String::new()),
-                client: match session.platform.unwrap_or(String::new()).as_str() {
+                os: session.os.unwrap_or_default(),
+                client: match session.platform.unwrap_or_default().as_str() {
                     "Discord Client" => String::from("desktop"),
                     "Discord Android" => String::from("mobile"),
                     "Discord iOS" => String::from("mobile"),
@@ -242,11 +242,14 @@ pub async fn dispatch_ready(
         })
     }
 
-    let experiments = if EplOptions::get().pomelo {
+    let mut experiments = if EplOptions::get().pomelo {
         vec![[268309827, 0, 1, -1, 7, 1071, 0, 0]]
     } else {
         vec![]
     };
+    
+    // Enable sessions
+    experiments.push([1095779154, 0, 1, -1, 2, 183, 0, 0]);
 
     send_message(
         thread_data,
