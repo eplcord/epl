@@ -4,6 +4,7 @@ mod hypesquad;
 mod tracking;
 mod users;
 mod aprilfools2024;
+mod gifs;
 
 use crate::authorization_extractor::get_session_context;
 use crate::http::v9::routes::auth::{
@@ -20,6 +21,7 @@ use axum::routing::{delete, get, patch, post, put};
 use axum::{middleware, Router};
 use crate::http::v9::routes::aprilfools2024::{count_lootboxes, get_lootboxes, open_lootbox, redeem_prize};
 use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
+use crate::http::v9::routes::gifs::{actually_get_trending_gifs, get_trending_gifs, gif_search_suggestions, search_gifs};
 use crate::http::v9::routes::tracking::science;
 use crate::http::v9::routes::users::notes::{get_notes, put_notes};
 
@@ -84,6 +86,13 @@ pub fn assemble_routes() -> Router {
         .route("/:channel_id", patch(modify_channel))
         .route_layer(middleware::from_fn(get_session_context));
 
+    let gifs = Router::new()
+        .route("/search", get(search_gifs))
+        .route("/trending", get(get_trending_gifs))
+        .route("/trending-gifs", get(actually_get_trending_gifs))
+        .route("/suggest", get(gif_search_suggestions))
+        .route_layer(middleware::from_fn(get_session_context));
+
     let aprilfools2024 = Router::new()
         .route("/count", get(count_lootboxes))
         .route_layer(middleware::from_fn(get_session_context));
@@ -93,6 +102,7 @@ pub fn assemble_routes() -> Router {
         .nest("/users", users)
         .nest("/hypesquad", hypesquad)
         .nest("/channels", channels)
+        .nest("/gifs", gifs)
         .nest("/lootboxes", aprilfools2024)
         .route("/experiments", get(tracking::experiments))
         .route("/science", post(tracking::science))

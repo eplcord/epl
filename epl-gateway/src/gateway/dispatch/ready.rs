@@ -37,6 +37,14 @@ pub async fn dispatch_ready(
 
     let mut queued_users: HashSet<i64> = HashSet::new();
 
+    let current_session = match get_session_by_token(&state.conn, token).await {
+        Ok(session) => session,
+        Err(_) => {
+            send_close(thread_data, UnknownError).await;
+            return;
+        }
+    };
+
     let user_struct = epl_common::User {
         verified: user.acct_verified,
         username: user.username,
@@ -45,19 +53,15 @@ pub async fn dispatch_ready(
         premium: (user.premium_type.unwrap_or(0) != 0),
         phone: user.phone,
         nsfw_allowed: user.nsfw_allowed,
-        // FIXME: We need to store more information about the current session
-        mobile: false,
+        mobile: matches!(current_session.platform.clone().unwrap_or_default().as_str(), "Discord Android" | "Discord iOS"),
         mfa_enabled: user.mfa_enabled,
         id: user.id.to_string(),
-        // TODO: pomelo related?
         global_name: user.display_name.clone(),
         flags: user.flags,
         email: user.email,
-        // TODO: pomelo related?
         display_name: user.display_name,
         discriminator: user.discriminator,
-        // FIXME: Same as "mobile"
-        desktop: false,
+        desktop: matches!(current_session.platform.unwrap_or_default().as_str(), "Discord Client"),
         bio: user.bio.unwrap_or_default(),
         banner_color: user.banner_colour,
         banner: user.banner,
@@ -70,14 +74,6 @@ pub async fn dispatch_ready(
     let tutorial = Tutorial {
         indicators_suppressed: true,
         indicators_confirmed: vec![],
-    };
-
-    let current_session = match get_session_by_token(&state.conn, token).await {
-        Ok(session) => session,
-        Err(_) => {
-            send_close(thread_data, UnknownError).await;
-            return;
-        }
     };
 
     let sessions: Vec<Session> = get_all_sessions(&state.conn, &user.id)
@@ -247,7 +243,7 @@ pub async fn dispatch_ready(
     } else {
         vec![]
     };
-    
+
     // Enable sessions
     experiments.push([1095779154, 0, 1, -1, 2, 183, 0, 0]);
 

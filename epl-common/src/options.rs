@@ -17,6 +17,7 @@ pub struct EplOptions {
     pub maxminddb: String,
     pub s3_bucket: String,
     pub pomelo: bool,
+    pub tenor_key: Option<String>
 }
 pub trait Options {
     fn get() -> EplOptions;
@@ -47,6 +48,7 @@ impl Options for EplOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap(),
+            tenor_key: env::var("TENOR_KEY").ok(),
         }
     }
 }

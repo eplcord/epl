@@ -59,12 +59,14 @@ Epl is at a point where basic account and messaging features work, this includes
   * Missing elements cause embeds to not show up on mobile
 * April Fools
   * 2024 implemented minus the avatar deco (Enable the Packages experiment to access)
+* Tenor
+  * Trending, search, and suggested terms fully supported
+  * Giphy soon
 
 Some stuff in progress:
 * Mutual friends list
 * Admin api
   * Ignoring the guild paths for now
-
 * Reactions
 * Mobile support
   * Turns out its incredibly easy to get the React Native Discord client to change its endpoints
@@ -80,7 +82,6 @@ Some things I'm definitely adding Eventually™ are:
 
 Things that at some point I want to add:
 * Webhooks
-* Tenor/Giphy gif search
 * Account connections
 * Stickers
 * Custom emojis
