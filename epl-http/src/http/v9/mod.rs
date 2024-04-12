@@ -1,10 +1,12 @@
 use sea_orm::{DatabaseConnection, EntityTrait};
-use epl_common::database::entities::{embed, message, user};
+use epl_common::database::entities::{embed, file, message, user};
 use epl_common::Stub;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_with::skip_serializing_none;
 use epl_common::database::entities::prelude::{Message, User};
 use epl_common::flags::{generate_public_flags, get_user_flags};
+use epl_common::options::{EplOptions, Options};
 
 pub(crate) mod errors;
 pub(crate) mod routes;
@@ -22,7 +24,7 @@ pub struct SharedUser {
 
 #[derive(Serialize, Deserialize)]
 pub struct SharedMessage {
-    attachments: Vec<Stub>,
+    attachments: Vec<SharedAttachment>,
     author: Option<SharedUser>,
     channel_id: String,
     components: Vec<Stub>,
@@ -50,6 +52,22 @@ pub struct SharedMessageReference {
     message_id: String,
 }
 
+#[derive(Serialize, Deserialize)]
+#[skip_serializing_none]
+pub struct SharedAttachment {
+    id: String,
+    filename: String,
+    content_type: String,
+    placeholder: Option<String>,
+    placeholder_version: Option<u8>,
+    content_scan_version: Option<u8>,
+    url: String,
+    proxy_url: String,
+    size: i64,
+    height: Option<i64>,
+    width: Option<i64>
+}
+
 pub fn generated_user_struct(user: user::Model) -> SharedUser {
     SharedUser {
         avatar: user.avatar,
@@ -68,10 +86,35 @@ pub fn generate_message_struct(
     ref_message: Option<(message::Model, Option<user::Model>)>,
     mentions: Vec<user::Model>,
     pinned: bool,
-    embeds: Vec<embed::Model>
+    embeds: Vec<embed::Model>,
+    attachments: Vec<file::Model>
 ) -> SharedMessage {
+    let options = EplOptions::get();
+    
     SharedMessage {
-        attachments: vec![],
+        attachments: attachments.iter().map(|x| {
+            let attachment_url = format!("{}://{}/attachments/{}/{}/{}",
+                    if options.require_ssl { "https" } else { "http" },
+                    options.cdn_url,
+                    message.channel_id.clone(),
+                    x.id,
+                    x.name.clone()
+                );
+
+            SharedAttachment {
+                id: x.id.to_string(),
+                filename: x.name.clone(),
+                content_type: x.content_type.clone().unwrap_or("application/octet-stream".to_string()),
+                placeholder: None,
+                placeholder_version: None,
+                content_scan_version: None,
+                url: attachment_url.clone(),
+                proxy_url: attachment_url,
+                size: x.size,
+                height: x.height,
+                width: x.width,
+            }
+        }).collect(),
         author: author.map(generated_user_struct),
         channel_id: message.channel_id.to_string(),
         components: vec![],
@@ -94,7 +137,7 @@ pub fn generate_message_struct(
         nonce: message.nonce,
         pinned,
         referenced_message: if let Some(ref_message) = ref_message {
-            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![], false, vec![])))
+            Some(Box::new(generate_message_struct(ref_message.0, ref_message.1, None, vec![], false, vec![], vec![])))
         } else {
             None
         },

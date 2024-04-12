@@ -7,6 +7,7 @@ pub use super::embed::Entity as Embed;
 pub use super::file::Entity as File;
 pub use super::mention::Entity as Mention;
 pub use super::message::Entity as Message;
+pub use super::message_attachment::Entity as MessageAttachment;
 pub use super::note::Entity as Note;
 pub use super::pin::Entity as Pin;
 pub use super::relationship::Entity as Relationship;

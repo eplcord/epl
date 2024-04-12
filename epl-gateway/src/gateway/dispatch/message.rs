@@ -2,7 +2,7 @@ use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
 use crate::gateway::schema::message::{generate_message_struct, generate_refed_message, MessageDelete};
 use crate::state::ThreadData;
 use crate::AppState;
-use epl_common::database::entities::prelude::{Embed, Mention, Message, User};
+use epl_common::database::entities::prelude::{Embed, File, Mention, Message, User};
 
 use epl_common::database::entities::{embed, mention, message, pin, user};
 use sea_orm::prelude::*;
@@ -62,13 +62,16 @@ pub async fn dispatch_message(thread_data: &mut ThreadData, state: &AppState, di
     
     let embeds: Vec<embed::Model> = message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
 
+    let attachments = message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
+
     let dispatch = generate_message_struct(
         message,
         message_author,
         refed_message,
         mentioned_users,
         pinned,
-        embeds
+        embeds,
+        attachments
     );
 
     send_message(

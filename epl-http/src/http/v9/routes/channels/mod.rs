@@ -14,12 +14,12 @@ use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
 use ril::{Image, Rgba};
 use ril::ImageFormat::WebP;
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, Mention, Message, User};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, File, Mention, Message, MessageAttachment, User};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
 use epl_common::nats::send_nats_message;
-use epl_common::database::entities::{channel_member, mention, message, pin, user};
+use epl_common::database::entities::{channel_member, mention, message, message_attachment, pin, user};
 use epl_common::messages::MessageTypes;
 use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, ProcessEmbed, TypingStarted};
 use epl_common::rustflake::Snowflake;
@@ -135,7 +135,9 @@ pub async fn get_messages(
                 
                 let embeds = i.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
 
-                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users, pinned, embeds));
+                let attachments = i.find_related(File).all(&state.conn).await.expect("Failed to access database!");
+
+                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users, pinned, embeds, attachments));
             }
 
             (StatusCode::OK, Json(GetMessageRes(output))).into_response()
@@ -146,12 +148,20 @@ pub async fn get_messages(
 #[derive(Deserialize)]
 pub struct SendMessageReq {
     content: String,
-    flags: i32,
+    flags: Option<i32>,
     nonce: String,
-    tts: bool,
+    tts: Option<bool>,
     message_reference: Option<SharedMessageReference>,
     allowed_mentions: Option<AllowedMentions>,
-    mobile_network_type: Option<String>
+    mobile_network_type: Option<String>,
+    attachments: Option<Vec<NewAttachment>>
+}
+
+#[derive(Deserialize)]
+pub struct NewAttachment {
+    filename: String,
+    id: String,
+    uploaded_filename: String,
 }
 
 #[derive(Deserialize)]
@@ -235,7 +245,7 @@ pub async fn send_message(
                 content: message.content.clone(),
                 timestamp: chrono::Utc::now().naive_utc(),
                 edited_timestamp: None,
-                tts: message.tts,
+                tts: message.tts.unwrap_or(false),
                 mention_everyone: calculated_permissions.contains(&InternalChannelPermissions::MentionEveryone) && message.content.contains("@everyone"),
                 nonce: Some(message.nonce),
                 r#type: {
@@ -245,7 +255,7 @@ pub async fn send_message(
                         MessageTypes::Default as i32
                     }
                 },
-                flags: Some(message.flags),
+                flags: Some(message.flags.unwrap_or(0)),
                 reference_message_id: if let Some(message_ref) = refed_message.clone() {
                     Some(message_ref.0.id)
                 } else {
@@ -278,6 +288,20 @@ pub async fn send_message(
                     .expect("Failed to access database!");
             }
 
+            if message.attachments.is_some() & calculated_permissions.contains(&InternalChannelPermissions::AttachFiles) {
+                for i in message.attachments.unwrap() {
+                    MessageAttachment::insert(
+                        message_attachment::Model {
+                            message: snowflake,
+                            file: i.uploaded_filename.parse().expect("Bad file id in attachments!"),
+                        }.into_active_model()
+                    )
+                        .exec(&state.conn)
+                        .await
+                        .expect("Failed to access database!");
+                }
+            }
+
             send_nats_message(
                 &state.nats_client,
                 requested_channel.id.to_string(),
@@ -301,6 +325,8 @@ pub async fn send_message(
                 }
             }
 
+            let attachments = new_message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
+
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
@@ -309,7 +335,8 @@ pub async fn send_message(
                     refed_message,
                     mention_results,
                     false,
-                    vec![]
+                    vec![],
+                    attachments
                 )),
             )
                 .into_response()
@@ -415,6 +442,8 @@ pub async fn edit_message(
 
             let embeds = requested_message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
 
+            let attachments = requested_message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
+
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
@@ -423,7 +452,8 @@ pub async fn edit_message(
                     refed_message,
                     mentioned_users,
                     pinned,
-                    embeds
+                    embeds,
+                    attachments
                 )),
             )
                 .into_response()

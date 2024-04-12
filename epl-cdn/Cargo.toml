@@ -36,3 +36,6 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 
 ril = { version = "0.10.1", features = ["webp", "gif", "png", "jpeg", "resize"] }
+
+magic = "0.16.2"
+mp4 = "0.14.0"

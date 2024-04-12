@@ -17,7 +17,8 @@ pub struct EplOptions {
     pub maxminddb: String,
     pub s3_bucket: String,
     pub pomelo: bool,
-    pub tenor_key: Option<String>
+    pub tenor_key: Option<String>,
+    pub cdn_url: String,
 }
 pub trait Options {
     fn get() -> EplOptions;
@@ -49,6 +50,7 @@ impl Options for EplOptions {
                 .parse()
                 .unwrap(),
             tenor_key: env::var("TENOR_KEY").ok(),
+            cdn_url: env::var("CDN_URL").expect("CDN_URL is required!"),
         }
     }
 }

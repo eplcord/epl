@@ -9,6 +9,7 @@ pub mod embed;
 pub mod file;
 pub mod mention;
 pub mod message;
+pub mod message_attachment;
 pub mod note;
 pub mod pin;
 pub mod relationship;

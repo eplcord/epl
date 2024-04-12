@@ -7,16 +7,36 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: i64,
-    pub upload_id: String,
+    pub upload_id: Option<String>,
     pub pending: bool,
-    pub content_type: String,
+    pub r#type: i32,
+    pub content_type: Option<String>,
     pub size: i64,
     pub name: String,
     pub width: Option<i64>,
     pub height: Option<i64>,
+    pub timestamp: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_many = "super::message_attachment::Entity")]
+    MessageAttachment,
+}
+
+impl Related<super::message_attachment::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::MessageAttachment.def()
+    }
+}
+
+impl Related<super::message::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::message_attachment::Relation::Message.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::message_attachment::Relation::File.def().rev())
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}

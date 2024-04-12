@@ -54,6 +54,8 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     SelfRef,
+    #[sea_orm(has_many = "super::message_attachment::Entity")]
+    MessageAttachment,
     #[sea_orm(has_many = "super::pin::Entity")]
     Pin,
     #[sea_orm(
@@ -78,6 +80,12 @@ impl Related<super::mention::Entity> for Entity {
     }
 }
 
+impl Related<super::message_attachment::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::MessageAttachment.def()
+    }
+}
+
 impl Related<super::pin::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Pin.def()
@@ -90,6 +98,15 @@ impl Related<super::channel::Entity> for Entity {
     }
     fn via() -> Option<RelationDef> {
         Some(super::pin::Relation::Message.def().rev())
+    }
+}
+
+impl Related<super::file::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::message_attachment::Relation::File.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::message_attachment::Relation::Message.def().rev())
     }
 }
 

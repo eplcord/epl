@@ -1,22 +1,27 @@
 mod avatars;
 mod channel_icons;
 mod badge_icons;
+mod attachments;
+mod upload;
 
 use aws_sdk_s3::primitives::ByteStream;
 use axum::body::Body;
+use axum::extract::DefaultBodyLimit;
 use axum::http::{header, StatusCode};
 use axum::response::IntoResponse;
 use axum::Router;
-use axum::routing::get;
+use axum::routing::{get, put};
 use ril::{Image, ResizeAlgorithm, Rgba};
 use ril::ImageFormat::WebP;
 use tokio_util::io::ReaderStream;
 use tracing::error;
 use epl_common::options::{EplOptions, Options};
 use crate::AppState;
+use crate::buckets::attachments::get_attachment;
 use crate::buckets::avatars::avatars;
 use crate::buckets::badge_icons::badge_icons;
 use crate::buckets::channel_icons::channel_icons;
+use crate::buckets::upload::upload_attachment;
 
 pub fn buckets() -> Router {
     Router::new()
@@ -26,6 +31,12 @@ pub fn buckets() -> Router {
         .route("/channel-icons/:channel_id/:file", get(channel_icons))
         // Badge Icons
         .route("/badge-icons/:file", get(badge_icons))
+        // Attachments
+        .route("/attachments/:channel_id/:file_id/:filename", get(get_attachment))
+        // Uploading
+        .route("/upload/:key/:filename", put(upload_attachment))
+        // TODO: Replace this with 500mb(?) when Nitro stuff is implemented, set it to 25mb for now
+        .layer(DefaultBodyLimit::max(26214400))
 }
 
 async fn get_image_or(

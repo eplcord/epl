@@ -107,3 +107,12 @@ pub struct User {
     pub avatar: Option<String>,
     pub accent_color: Option<String>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[repr(i32)]
+pub enum UploadedFileType {
+    Avatar = 1,
+    ChannelIcon = 2,
+    GuildIcon = 3,
+    Attachment = 4,
+}

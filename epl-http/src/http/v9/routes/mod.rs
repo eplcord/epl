@@ -25,6 +25,7 @@ use serde_derive::Serialize;
 use epl_common::Stub;
 use crate::debug::debug_body;
 use crate::http::v9::routes::aprilfools2024::{count_lootboxes, get_lootboxes, open_lootbox, redeem_prize};
+use crate::http::v9::routes::channels::attachments::prepare_s3_attachment_upload;
 use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
 use crate::http::v9::routes::gifs::{actually_get_trending_gifs, get_trending_gifs, gif_search_suggestions, search_gifs};
 use crate::http::v9::routes::tracking::science;
@@ -88,6 +89,7 @@ pub fn assemble_routes() -> Router {
         .route("/:channel_id/pins", get(get_pins))
         .route("/:channel_id/pins/:message_id", put(new_pin))
         .route("/:channel_id/pins/:message_id", delete(delete_pin))
+        .route("/:channel_id/attachments", post(prepare_s3_attachment_upload))
         .route("/:channel_id", patch(modify_channel))
         .route_layer(middleware::from_fn(get_session_context));
 

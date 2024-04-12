@@ -17,13 +17,15 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(File::UploadId).string().not_null())
+                    .col(ColumnDef::new(File::UploadId).string())
                     .col(ColumnDef::new(File::Pending).boolean().not_null())
-                    .col(ColumnDef::new(File::ContentType).string().not_null())
+                    .col(ColumnDef::new(File::Type).integer().not_null())
+                    .col(ColumnDef::new(File::ContentType).string())
                     .col(ColumnDef::new(File::Size).big_integer().not_null())
                     .col(ColumnDef::new(File::Name).string().not_null())
                     .col(ColumnDef::new(File::Width).big_integer())
                     .col(ColumnDef::new(File::Height).big_integer())
+                    .col(ColumnDef::new(File::Timestamp).date_time().not_null())
                     .to_owned(),
             )
             .await
@@ -37,14 +39,16 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum File {
+pub enum File {
     Table,
     Id,
     UploadId,
     Pending,
+    Type,
     ContentType,
     Size,
     Name,
     Width,
-    Height
+    Height,
+    Timestamp
 }
