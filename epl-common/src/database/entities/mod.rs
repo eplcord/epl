@@ -6,6 +6,7 @@ pub mod april_fools2024;
 pub mod channel;
 pub mod channel_member;
 pub mod embed;
+pub mod file;
 pub mod mention;
 pub mod message;
 pub mod note;

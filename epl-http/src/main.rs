@@ -24,6 +24,7 @@ use migration::{Migrator, MigratorTrait};
 mod authorization_extractor;
 mod http;
 mod nats;
+mod debug;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

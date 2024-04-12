@@ -4,6 +4,7 @@ pub use super::april_fools2024::Entity as AprilFools2024;
 pub use super::channel::Entity as Channel;
 pub use super::channel_member::Entity as ChannelMember;
 pub use super::embed::Entity as Embed;
+pub use super::file::Entity as File;
 pub use super::mention::Entity as Mention;
 pub use super::message::Entity as Message;
 pub use super::note::Entity as Note;

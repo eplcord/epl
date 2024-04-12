@@ -18,7 +18,12 @@ use crate::http::v9::routes::users::relationships::{
     delete_relationship, get_all_relationships, modify_relationship, new_relationship,
 };
 use axum::routing::{delete, get, patch, post, put};
-use axum::{middleware, Router};
+use axum::{Json, middleware, Router};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use serde_derive::Serialize;
+use epl_common::Stub;
+use crate::debug::debug_body;
 use crate::http::v9::routes::aprilfools2024::{count_lootboxes, get_lootboxes, open_lootbox, redeem_prize};
 use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
 use crate::http::v9::routes::gifs::{actually_get_trending_gifs, get_trending_gifs, gif_search_suggestions, search_gifs};
@@ -93,6 +98,9 @@ pub fn assemble_routes() -> Router {
         .route("/suggest", get(gif_search_suggestions))
         .route_layer(middleware::from_fn(get_session_context));
 
+    let safetyhub = Router::new()
+        .route("/@me", get(account_standing));
+
     let aprilfools2024 = Router::new()
         .route("/count", get(count_lootboxes))
         .route_layer(middleware::from_fn(get_session_context));
@@ -104,8 +112,39 @@ pub fn assemble_routes() -> Router {
         .nest("/channels", channels)
         .nest("/gifs", gifs)
         .nest("/lootboxes", aprilfools2024)
+        .nest("/safety-hub", safetyhub)
         .route("/experiments", get(tracking::experiments))
         .route("/science", post(tracking::science))
         .route("/track", post(tracking::science))
         .route("/metrics", post(tracking::science))
+        .route_layer(middleware::from_fn(debug_body))
+}
+
+#[derive(Serialize)]
+struct AccountStandingRes {
+    account_standing: AccountStanding,
+    classifications: Vec<Stub>,
+    guild_classifications: Vec<Stub>
+}
+
+#[derive(Serialize)]
+struct AccountStanding {
+    /// 100 = All Good  
+    /// 200 = Limited  
+    /// 300 = Very Limited  
+    /// 400 = At Risk  
+    /// 500 = Suspended  
+    state: i32
+}
+
+pub async fn account_standing() -> impl IntoResponse {
+    Json(AccountStandingRes {
+        account_standing: AccountStanding { state: 100 },
+        classifications: vec![],
+        guild_classifications: vec![],
+    })
+}
+
+pub async fn stub() -> impl IntoResponse {
+    StatusCode::NO_CONTENT
 }

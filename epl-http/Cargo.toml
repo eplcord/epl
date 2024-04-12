@@ -68,3 +68,5 @@ ril = { version = "0.10.1", features = ["webp", "gif", "png", "jpeg", "resize"] 
 sha256 = "1.5.0"
 
 url = "2.5.0"
+
+http-body-util = "0.1.1"

@@ -36,6 +36,7 @@ pub enum GatewayData {
 }
 
 pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
+    #[cfg(debug_assertions)]
     debug!("Decoding message: {}", &msg);
 
     // TODO: Figure out a less error-prone way of doing this, probably via custom deserialization
@@ -44,6 +45,7 @@ pub fn get_opcode(msg: String) -> Result<(OpCodes, GatewayData), ()> {
     if message_json.is_ok() {
         let output = message_json.unwrap();
 
+        #[cfg(debug_assertions)]
         debug!("Decoded as Op: {:?}", &output.op);
 
         if output.d.is_none() {

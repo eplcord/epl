@@ -1,4 +1,5 @@
 pub mod pins;
+pub mod attachments;
 
 use std::io;
 use aws_sdk_s3::primitives::ByteStream;

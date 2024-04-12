@@ -18,6 +18,7 @@ mod m20240321_124842_pomelo;
 mod m20240327_195051_create_pins;
 mod m20240331_060215_create_embeds;
 mod m20240402_025357_create_april_fools_2024;
+mod m20240412_003408_create_files;
 
 pub struct Migrator;
 
@@ -43,6 +44,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240327_195051_create_pins::Migration),
             Box::new(m20240331_060215_create_embeds::Migration),
             Box::new(m20240402_025357_create_april_fools_2024::Migration),
+            Box::new(m20240412_003408_create_files::Migration),
         ]
     }
 }
