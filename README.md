@@ -62,21 +62,28 @@ Epl is at a point where basic account and messaging features work, this includes
 * Tenor
   * Trending, search, and suggested terms fully supported
   * Giphy soon
+* Attachments
+  * Note that video attachments are still a bit iffy, MP4s are properly processed but will be missing a thumbnail, 
+    WebMs will not be processed at all yet, this will be fixed soon
+  * Clips (which are sent via attachments) are also not supported
+  * All the other attachment types work fine in my testing
+  * Deletion is not yet possible but that'll be done like tomorrow
+  * Unused file eviction will be added later
+* Mobile support
+  * Turns out its incredibly easy to get the React Native Discord client to change its endpoints
+    * It also uses `window.GLOBAL_ENV` when starting and only requests an uncompressed JSON gateway
 
 Some stuff in progress:
 * Mutual friends list
 * Admin api
   * Ignoring the guild paths for now
 * Reactions
-* Mobile support
-  * Turns out its incredibly easy to get the React Native Discord client to change its endpoints
-    * It also uses `window.GLOBAL_ENV` when starting and only requests an uncompressed JSON gateway
+* Settings sync
+  * We have the protobufs compiling but no work has been done on user settings yet
 
 Some things I'm definitely adding Eventually™ are:
 * Presence
 * Guilds
-* Attachments
-* Settings sync
 * Favourite gifs
 * Threads
 
