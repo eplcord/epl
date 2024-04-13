@@ -17,14 +17,15 @@ use ril::ImageFormat::WebP;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, File, Mention, Message, MessageAttachment, User};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage, SharedMessageReference};
+use crate::http::v9::{generate_message_struct, generate_refed_message, SharedAttachment, SharedMessage, SharedMessageReference};
 use epl_common::nats::send_nats_message;
-use epl_common::database::entities::{channel_member, mention, message, message_attachment, pin, user};
+use epl_common::database::entities::{channel_member, embed, file, mention, message, message_attachment, pin, user};
 use epl_common::messages::MessageTypes;
 use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, ProcessEmbed, TypingStarted};
 use epl_common::rustflake::Snowflake;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
+use tracing::debug;
 use url::Url;
 use epl_common::channels::ChannelTypes;
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
@@ -33,6 +34,7 @@ use epl_common::{RelationshipType, URL_REGEX, USER_MENTION_REGEX};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::nats::Messages;
 use epl_common::options::{EplOptions, Options};
+use migration::IntoCondition;
 use crate::http::v9::routes::users::channels::{ResChannel, ResChannelMember};
 
 
@@ -346,7 +348,8 @@ pub async fn send_message(
 
 #[derive(Deserialize)]
 pub struct EditMessageReq {
-    content: String,
+    content: Option<String>,
+    attachments: Option<Vec<SharedAttachment>>
 }
 
 pub async fn edit_message(
@@ -381,9 +384,42 @@ pub async fn edit_message(
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
+            let requested_message_id = requested_message.id;
             let mut requested_message = requested_message.into_active_model();
 
-            requested_message.content = Set(message.content);
+
+            if message.content.is_some() {
+                requested_message.content = Set(message.content.unwrap());
+            }
+
+            if message.attachments.is_some() {
+                let mut ne_conditions = Condition::all();
+
+                for i in message.attachments.unwrap() {
+                    ne_conditions = ne_conditions.add(message_attachment::Column::File.ne(i.id.parse::<i64>().unwrap()));
+                }
+
+                let attachments: Vec<(message_attachment::Model, Vec<file::Model>)> = MessageAttachment::find()
+                    .filter(message_attachment::Column::Message.eq(requested_message_id))
+                    .filter(ne_conditions)
+                    .find_with_related(File)
+                    .all(&state.conn)
+                    .await
+                    .expect("Failed to access database!");
+
+                for i in attachments {
+                    for x in i.1 {
+                        let mut x = x.into_active_model();
+
+                        x.requested_deletion = Set(true);
+
+                        x.update(&state.conn).await.expect("Failed to access database!");
+                    }
+
+                    i.0.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
+                }
+            }
+
             requested_message.edited_timestamp = Set(Some(chrono::Utc::now().naive_utc()));
 
             let requested_message = requested_message
@@ -507,6 +543,33 @@ pub async fn delete_message(
                     .delete(&state.conn)
                     .await
                     .expect("Failed to access database!");
+            }
+
+            // Delete any embeds attached to the message
+            let embeds: Vec<embed::Model> = requested_message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
+
+            for i in embeds {
+                i.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
+            }
+
+            // Mark attachments as requesting deletion
+            let attachments: Vec<(message_attachment::Model, Vec<file::Model>)> = MessageAttachment::find()
+                .filter(message_attachment::Column::Message.eq(cache.0))
+                .find_with_related(File)
+                .all(&state.conn)
+                .await
+                .expect("Failed to access database!");
+
+            for i in attachments {
+                for x in i.1 {
+                    let mut x = x.into_active_model();
+
+                    x.requested_deletion = Set(true);
+
+                    x.update(&state.conn).await.expect("Failed to access database!");
+                }
+
+                i.0.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
             }
 
             requested_message

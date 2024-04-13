@@ -54,6 +54,8 @@ pub enum Relation {
     Channel,
     #[sea_orm(has_many = "super::channel_member::Entity")]
     ChannelMember,
+    #[sea_orm(has_many = "super::file::Entity")]
+    File,
     #[sea_orm(has_many = "super::mention::Entity")]
     Mention,
     #[sea_orm(has_many = "super::message::Entity")]
@@ -77,6 +79,12 @@ impl Related<super::channel::Entity> for Entity {
 impl Related<super::channel_member::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::ChannelMember.def()
+    }
+}
+
+impl Related<super::file::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::File.def()
     }
 }
 

@@ -16,17 +16,34 @@ pub struct Model {
     pub width: Option<i64>,
     pub height: Option<i64>,
     pub timestamp: DateTime,
+    pub requested_deletion: bool,
+    pub uploader: i64,
+    pub clip: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::message_attachment::Entity")]
     MessageAttachment,
+    #[sea_orm(
+        belongs_to = "super::user::Entity",
+        from = "Column::Uploader",
+        to = "super::user::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    User,
 }
 
 impl Related<super::message_attachment::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::MessageAttachment.def()
+    }
+}
+
+impl Related<super::user::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::User.def()
     }
 }
 

@@ -25,7 +25,7 @@ use serde_derive::Serialize;
 use epl_common::Stub;
 use crate::debug::debug_body;
 use crate::http::v9::routes::aprilfools2024::{count_lootboxes, get_lootboxes, open_lootbox, redeem_prize};
-use crate::http::v9::routes::channels::attachments::prepare_s3_attachment_upload;
+use crate::http::v9::routes::channels::attachments::{delete_attachment_upload, prepare_s3_attachment_upload};
 use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
 use crate::http::v9::routes::gifs::{actually_get_trending_gifs, get_trending_gifs, gif_search_suggestions, search_gifs};
 use crate::http::v9::routes::tracking::science;
@@ -101,7 +101,12 @@ pub fn assemble_routes() -> Router {
         .route_layer(middleware::from_fn(get_session_context));
 
     let safetyhub = Router::new()
-        .route("/@me", get(account_standing));
+        .route("/@me", get(account_standing))
+        .route_layer(middleware::from_fn(get_session_context));
+
+    let attachments = Router::new()
+        .route("/:attachment_id", delete(delete_attachment_upload))
+        .route_layer(middleware::from_fn(get_session_context));
 
     let aprilfools2024 = Router::new()
         .route("/count", get(count_lootboxes))
@@ -115,6 +120,7 @@ pub fn assemble_routes() -> Router {
         .nest("/gifs", gifs)
         .nest("/lootboxes", aprilfools2024)
         .nest("/safety-hub", safetyhub)
+        .nest("/attachments", attachments)
         .route("/experiments", get(tracking::experiments))
         .route("/science", post(tracking::science))
         .route("/track", post(tracking::science))

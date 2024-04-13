@@ -20,6 +20,7 @@ mod m20240331_060215_create_embeds;
 mod m20240402_025357_create_april_fools_2024;
 mod m20240412_003408_create_files;
 mod m20240412_062553_create_message_attachments;
+mod m20240413_215635_add_requested_deletion_to_files;
 
 pub struct Migrator;
 
@@ -47,6 +48,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240402_025357_create_april_fools_2024::Migration),
             Box::new(m20240412_003408_create_files::Migration),
             Box::new(m20240412_062553_create_message_attachments::Migration),
+            Box::new(m20240413_215635_add_requested_deletion_to_files::Migration),
         ]
     }
 }

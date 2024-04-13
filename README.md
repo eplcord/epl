@@ -54,9 +54,7 @@ Epl is at a point where basic account and messaging features work, this includes
   * Badges
 * Media proxy
   * Need to improve URL matching (don't match urls in codeblocks or surrounded by less/greater than signs)
-  * External images don't embed, need to look what to do here as Mediaproxy doesn't send anything
   * Some sites break Mediaproxy (like Discord!)
-  * Missing elements cause embeds to not show up on mobile
 * April Fools
   * 2024 implemented minus the avatar deco (Enable the Packages experiment to access)
 * Tenor
@@ -67,7 +65,6 @@ Epl is at a point where basic account and messaging features work, this includes
     WebMs will not be processed at all yet, this will be fixed soon
   * Clips (which are sent via attachments) are also not supported
   * All the other attachment types work fine in my testing
-  * Deletion is not yet possible but that'll be done like tomorrow
   * Unused file eviction will be added later
 * Mobile support
   * Turns out its incredibly easy to get the React Native Discord client to change its endpoints
@@ -85,6 +82,7 @@ Some things I'm definitely adding Eventually™ are:
 * Presence
 * Guilds
 * Favourite gifs
+  * Requires settings sync 
 * Threads
 
 Things that at some point I want to add:
