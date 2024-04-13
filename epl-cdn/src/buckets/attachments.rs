@@ -54,8 +54,12 @@ pub async fn get_attachment(
                     let body = Body::from_stream(stream);
 
                     let headers = [
-                        (header::CONTENT_TYPE, file.content_type.unwrap_or("application/octet-stream".to_string())),
                         (header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", file.name)),
+                        (header::CONTENT_LENGTH, file.size.to_string()),
+                        (header::CONTENT_RANGE, format!("bytes 0-{}/{}", (file.size - 1), file.size)),
+                        (header::CONTENT_TYPE, file.content_type.unwrap_or("application/octet-stream".to_string())),
+                        (header::ACCESS_CONTROL_EXPOSE_HEADERS, "Content-Range, Accept-Ranges".to_string()),
+                        (header::ACCEPT_RANGES, "bytes".to_string())
                     ];
 
                     (headers, body).into_response()
