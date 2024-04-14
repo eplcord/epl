@@ -349,7 +349,8 @@ pub async fn send_message(
 #[derive(Deserialize)]
 pub struct EditMessageReq {
     content: Option<String>,
-    attachments: Option<Vec<SharedAttachment>>
+    attachments: Option<Vec<SharedAttachment>>,
+    flags: Option<i32>
 }
 
 pub async fn edit_message(
@@ -384,12 +385,13 @@ pub async fn edit_message(
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
-            let requested_message_id = requested_message.id;
-            let mut requested_message = requested_message.into_active_model();
+            // Remove all embeds
+            if message.flags.is_some_and(|x| x == 4) {
+                let embeds: Vec<embed::Model> = requested_message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
 
-
-            if message.content.is_some() {
-                requested_message.content = Set(message.content.unwrap());
+                for i in embeds {
+                    i.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
+                }
             }
 
             if message.attachments.is_some() {
@@ -400,7 +402,7 @@ pub async fn edit_message(
                 }
 
                 let attachments: Vec<(message_attachment::Model, Vec<file::Model>)> = MessageAttachment::find()
-                    .filter(message_attachment::Column::Message.eq(requested_message_id))
+                    .filter(message_attachment::Column::Message.eq(requested_message.id))
                     .filter(ne_conditions)
                     .find_with_related(File)
                     .all(&state.conn)
@@ -418,6 +420,12 @@ pub async fn edit_message(
 
                     i.0.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
                 }
+            }
+            
+            let mut requested_message = requested_message.into_active_model();
+
+            if message.content.is_some() {
+                requested_message.content = Set(message.content.unwrap());
             }
 
             requested_message.edited_timestamp = Set(Some(chrono::Utc::now().naive_utc()));
