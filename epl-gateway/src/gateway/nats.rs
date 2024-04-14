@@ -1,4 +1,4 @@
-use tracing::log::{debug, error};
+use tracing::log::error;
 use crate::gateway::dispatch::channel::{ChannelRecipientUpdateType, dispatch_channel_update, dispatch_channel_delete, dispatch_channel_recipient_update, ChannelTypeUpdate, dispatch_channel_pins_update, dispatch_channel_pins_ack};
 use crate::gateway::dispatch::message::{dispatch_message, dispatch_message_delete, DispatchMessageTypes};
 use crate::gateway::dispatch::relationships::{
@@ -10,6 +10,7 @@ use crate::gateway::schema::GatewayMessage;
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::nats::Messages;
+use crate::gateway::dispatch::reactions::{dispatch_message_reaction_add, dispatch_message_reaction_remove};
 use crate::gateway::dispatch::typing::dispatch_typing_start;
 use crate::gateway::dispatch::user_note_update::dispatch_user_note_update;
 use crate::gateway::schema::error_codes::ErrorCode;
@@ -75,6 +76,12 @@ pub async fn handle_nats_message(thread_data: &mut ThreadData, msg: Messages, st
         }
         Messages::MessageAck { message_id } => {
             // TODO
+        }
+        Messages::MessageReactionAdd { message_id, user_id, emoji } => {
+            dispatch_message_reaction_add(thread_data, state, message_id, user_id, emoji).await;
+        }
+        Messages::MessageReactionRemove { message_id, user_id, emoji } => {
+            dispatch_message_reaction_remove(thread_data, state, message_id, user_id, emoji).await;
         }
         _ => {
             error!("Unsupported message received!");

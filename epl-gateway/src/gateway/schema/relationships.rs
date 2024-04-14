@@ -1,5 +1,5 @@
-use crate::gateway::schema::SharedUser;
 use serde_derive::{Deserialize, Serialize};
+use epl_common::schema::v9;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RelationshipAdd {
@@ -9,7 +9,7 @@ pub struct RelationshipAdd {
     pub since: String,
     #[serde(rename = "type")]
     pub _type: i32,
-    pub user: SharedUser,
+    pub user: v9::user::User,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

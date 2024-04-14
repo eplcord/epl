@@ -13,8 +13,9 @@ use epl_common::permissions::{internal_permission_calculator, InternalChannelPer
 use epl_common::rustflake::Snowflake;
 use crate::AppState;
 use crate::authorization_extractor::SessionContext;
-use crate::http::v9::{generate_message_struct, generate_refed_message, SharedMessage};
 use epl_common::nats::send_nats_message;
+use epl_common::schema::v9;
+use epl_common::schema::v9::message::{generate_message_struct, generate_reactions, generate_refed_message};
 
 pub async fn new_pin(
     Extension(state): Extension<AppState>,
@@ -240,7 +241,7 @@ pub async fn get_pins(
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
-            let mut pins: Vec<SharedMessage> = vec![];
+            let mut pins: Vec<v9::message::Message> = vec![];
             let pins_model: Vec<(pin::Model, Option<message::Model>)> = Pin::find()
                 .filter(pin::Column::Channel.eq(requested_channel.id))
                 .order_by_desc(pin::Column::Timestamp)
@@ -287,7 +288,9 @@ pub async fn get_pins(
 
                         let attachments = message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
 
-                        pins.push(generate_message_struct(message, author, refed_message, mentioned_users, true, embeds, attachments));
+                        let reactions = generate_reactions(&state.conn, &message, &session_context.user.id).await;
+                        
+                        pins.push(generate_message_struct(message, author, refed_message, mentioned_users, true, embeds, attachments, reactions));
                     }
                 }
             }

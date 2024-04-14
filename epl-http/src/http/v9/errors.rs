@@ -77,6 +77,7 @@ pub enum APIErrorCode {
     InvalidFormBody,
     FriendRequestBlocked,
     CannotSendFriendRequestToSelf,
+    UnknownEmoji
 }
 
 impl From<APIErrorCode> for u32 {
@@ -89,7 +90,8 @@ impl From<APIErrorCode> for u32 {
             APIErrorCode::PasswordDoesNotMatch => 50018,
             APIErrorCode::InvalidFormBody => 50035,
             APIErrorCode::CannotSendFriendRequestToSelf => 80003,
-            APIErrorCode::FriendRequestBlocked => 80001
+            APIErrorCode::FriendRequestBlocked => 80001,
+            APIErrorCode::UnknownEmoji => 10014
         }
     }
 }
@@ -107,6 +109,7 @@ impl From<APIErrorCode> for String {
                 "Cannot send friend request to self".to_string()
             }
             APIErrorCode::FriendRequestBlocked => "Friend request blocked".to_string(),
+            APIErrorCode::UnknownEmoji => "Unknown Emoji".to_string()
         }
     }
 }
@@ -122,6 +125,7 @@ impl From<APIErrorCode> for StatusCode {
             APIErrorCode::InvalidFormBody => StatusCode::BAD_REQUEST,
             APIErrorCode::CannotSendFriendRequestToSelf => StatusCode::BAD_REQUEST,
             APIErrorCode::FriendRequestBlocked => StatusCode::BAD_REQUEST,
+            APIErrorCode::UnknownEmoji => StatusCode::BAD_REQUEST
         }
     }
 }

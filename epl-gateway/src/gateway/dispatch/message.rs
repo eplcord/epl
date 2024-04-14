@@ -1,11 +1,12 @@
 use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
-use crate::gateway::schema::message::{generate_message_struct, generate_refed_message, MessageDelete};
+use crate::gateway::schema::message::MessageDelete;
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::database::entities::prelude::{Embed, File, Mention, Message, User};
 
 use epl_common::database::entities::{embed, mention, message, pin, user};
 use sea_orm::prelude::*;
+use epl_common::schema::v9::message::{generate_message_struct, generate_reactions, generate_refed_message};
 
 pub enum DispatchMessageTypes {
     Create,
@@ -64,6 +65,8 @@ pub async fn dispatch_message(thread_data: &mut ThreadData, state: &AppState, di
 
     let attachments = message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
 
+    let reactions = generate_reactions(&state.conn, &message, &thread_data.gateway_state.user_id.unwrap()).await;
+    
     let dispatch = generate_message_struct(
         message,
         message_author,
@@ -71,7 +74,8 @@ pub async fn dispatch_message(thread_data: &mut ThreadData, state: &AppState, di
         mentioned_users,
         pinned,
         embeds,
-        attachments
+        attachments,
+        reactions
     );
 
     send_message(

@@ -19,7 +19,6 @@ use crate::http::v9::routes::users::relationships::{
 };
 use axum::routing::{delete, get, patch, post, put};
 use axum::{Json, middleware, Router};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde_derive::Serialize;
 use epl_common::Stub;
@@ -27,6 +26,7 @@ use crate::debug::debug_body;
 use crate::http::v9::routes::aprilfools2024::{count_lootboxes, get_lootboxes, open_lootbox, redeem_prize};
 use crate::http::v9::routes::channels::attachments::{delete_attachment_upload, prepare_s3_attachment_upload};
 use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
+use crate::http::v9::routes::channels::reactions::{add_reaction, delete_specific_user_reaction, get_reactions, remove_reaction};
 use crate::http::v9::routes::gifs::{actually_get_trending_gifs, get_trending_gifs, gif_search_suggestions, search_gifs};
 use crate::http::v9::routes::tracking::science;
 use crate::http::v9::routes::users::notes::{get_notes, put_notes};
@@ -81,6 +81,10 @@ pub fn assemble_routes() -> Router {
     let channels = Router::new()
         .route("/:channel_id/messages/:message_id", patch(edit_message))
         .route("/:channel_id/messages/:message_id", delete(delete_message))
+        .route("/:channel_id/messages/:message_id/reactions/:emoji", get(get_reactions))
+        .route("/:channel_id/messages/:message_id/reactions/:emoji/%40me", put(add_reaction))
+        .route("/:channel_id/messages/:message_id/reactions/:emoji/:type/%40me", delete(remove_reaction))
+        .route("/:channel_id/messages/:message_id/reactions/:emoji/:type/:user_id", delete(delete_specific_user_reaction))
         .route("/:channel_id/messages", get(get_messages))
         .route("/:channel_id/messages", post(send_message))
         .route("/:channel_id/typing", post(typing))
@@ -151,8 +155,4 @@ pub async fn account_standing() -> impl IntoResponse {
         classifications: vec![],
         guild_classifications: vec![],
     })
-}
-
-pub async fn stub() -> impl IntoResponse {
-    StatusCode::NO_CONTENT
 }

@@ -9,7 +9,6 @@ use tracing::error;
 use epl_common::database::entities::file;
 use epl_common::database::entities::prelude::{Channel, File};
 use epl_common::{gen_token, UploadedFileType};
-use epl_common::database::entities::file::Model;
 use epl_common::options::{EplOptions, Options};
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
 use epl_common::rustflake::Snowflake;

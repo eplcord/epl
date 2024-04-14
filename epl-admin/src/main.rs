@@ -1,8 +1,6 @@
 use std::env;
 use clap::{Args, Parser, Subcommand};
-use tracing::log::debug;
-use epl_common::rustflake;
-use epl_common::tenor::ContentFormat::mp4;
+use unic::emoji::char::is_emoji;
 use epl_common::tenor::{get_gif_categories, get_suggested_search_terms, get_trending_gifs, search_tenor};
 
 #[derive(Clone)]
@@ -34,9 +32,21 @@ struct Cli {
 enum Commands {
     /// Enable the Admin API HTTP Server
     Server,
+    /// Various commands to do debugging
+    #[command(subcommand)]
+    Debug(DebugCommands)
+}
+
+#[derive(Debug, Subcommand)]
+enum DebugCommands {
     /// Test various Tenor related features
     #[command(subcommand)]
     Tenor(TenorCommands),
+    /// Check to see if some text is a valid emoji
+    Emoji {
+        /// Text to check if it's a valid emoji
+        text: char
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -74,27 +84,28 @@ async fn main() {
         Commands::Server => {
             unimplemented!()
         }
-        Commands::Tenor(tenor) => {
-            match tenor {
-                TenorCommands::Search { search_query } => {
-                    let tenor_key = options.tenor_key.unwrap();
-
-                    debug!("{:?}", search_tenor(tenor_key, search_query, None, String::from("mp4")).await);
+        Commands::Debug(debug) => {
+            match debug {
+                DebugCommands::Tenor(tenor) => {
+                    let tenor_key = options.tenor_key.expect("Please specify the TENOR_KEY environment variable!");
+                    
+                    match tenor {
+                        TenorCommands::Search { search_query } => {
+                            println!("{:?}", search_tenor(tenor_key, search_query, None, String::from("mp4")).await);
+                        }
+                        TenorCommands::Categories => {
+                            println!("{:?}", get_gif_categories(tenor_key, None).await);
+                        }
+                        TenorCommands::Trending { limit } => {
+                            println!("{:?}", get_trending_gifs(tenor_key, limit, None, String::from("mp4")).await);
+                        }
+                        TenorCommands::Suggestions { search_query, limit } => {
+                            println!("{:?}", get_suggested_search_terms(tenor_key, search_query, limit, None).await)
+                        }
+                    }
                 }
-                TenorCommands::Categories => {
-                    let tenor_key = options.tenor_key.unwrap();
-
-                    debug!("{:?}", get_gif_categories(tenor_key, None).await);
-                }
-                TenorCommands::Trending { limit } => {
-                    let tenor_key = options.tenor_key.unwrap();
-
-                    debug!("{:?}", get_trending_gifs(tenor_key, limit, None, String::from("mp4")).await);
-                }
-                TenorCommands::Suggestions { search_query, limit } => {
-                    let tenor_key = options.tenor_key.unwrap();
-
-                    debug!("{:?}", get_suggested_search_terms(tenor_key, search_query, limit, None).await)
+                DebugCommands::Emoji { text } => {
+                    println!("{}: {:?}", text, is_emoji(text))
                 }
             }
         }

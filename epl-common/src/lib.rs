@@ -18,6 +18,8 @@ pub mod permissions;
 pub mod relationship;
 mod protobufs;
 pub mod tenor;
+pub mod schema;
+
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")
 });

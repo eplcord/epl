@@ -7,7 +7,7 @@ use axum_tungstenite::Message;
 use crate::fragmented_write::two_frame_fragmentaion;
 use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelPinsAck, ChannelPinsUpdate, ChannelRecipientAdd, ChannelRecipientRemove};
 use crate::gateway::schema::error_codes::ErrorCode;
-use crate::gateway::schema::message::{MessageDelete, SharedMessage};
+use crate::gateway::schema::message::{MessageDelete};
 use crate::gateway::schema::opcodes::{GatewayData, OpCodes};
 use crate::gateway::schema::ready::{Ready, ReadySupplemental};
 use crate::gateway::schema::relationships::{RelationshipAdd, RelationshipRemove};
@@ -19,8 +19,10 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use tungstenite::protocol::frame::coding::{CloseCode, Data, OpCode};
 use tungstenite::protocol::frame::{CloseFrame, Frame};
+use epl_common::schema::v9;
 use crate::gateway::dispatch::typing::TypingStart;
 use crate::gateway::dispatch::user_note_update::UserNoteUpdate;
+use crate::gateway::schema::reactions::{MessageReactionAdd, MessageReactionRemove};
 
 pub(crate) mod channel;
 pub(crate) mod message;
@@ -29,6 +31,8 @@ pub(crate) mod ready_supplemental;
 pub(crate) mod relationships;
 pub(crate) mod typing;
 pub(crate) mod user_note_update;
+pub(crate) mod reactions;
+
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum DispatchTypes {
@@ -39,15 +43,17 @@ pub enum DispatchTypes {
     ChannelCreate(ChannelCreate),
     ChannelUpdate(ChannelCreate),
     ChannelDelete(ChannelDelete),
-    MessageCreate(SharedMessage),
-    MessageUpdate(SharedMessage),
+    MessageCreate(v9::message::Message),
+    MessageUpdate(v9::message::Message),
     MessageDelete(MessageDelete),
     TypingStart(TypingStart),
     ChannelRecipientAdd(ChannelRecipientAdd),
     ChannelRecipientRemove(ChannelRecipientRemove),
     UserNoteUpdate(UserNoteUpdate),
     ChannelPinsUpdate(ChannelPinsUpdate),
-    ChannelPinsAck(ChannelPinsAck)
+    ChannelPinsAck(ChannelPinsAck),
+    MessageReactionAdd(MessageReactionAdd),
+    MessageReactionRemove(MessageReactionRemove)
 }
 
 impl From<DispatchTypes> for String {
@@ -68,7 +74,9 @@ impl From<DispatchTypes> for String {
             DispatchTypes::ChannelRecipientRemove(_) => String::from("CHANNEL_RECIPIENT_REMOVE"),
             DispatchTypes::UserNoteUpdate(_) => String::from("USER_NOTE_UPDATE"),
             DispatchTypes::ChannelPinsUpdate(_) => String::from("CHANNEL_PINS_UPDATE"),
-            DispatchTypes::ChannelPinsAck(_) => String::from("CHANNEL_PINS_ACK")
+            DispatchTypes::ChannelPinsAck(_) => String::from("CHANNEL_PINS_ACK"),
+            DispatchTypes::MessageReactionAdd(_) => String::from("MESSAGE_REACTION_ADD"),
+            DispatchTypes::MessageReactionRemove(_) => String::from("MESSAGE_REACTION_REMOVE")
         }
     }
 }

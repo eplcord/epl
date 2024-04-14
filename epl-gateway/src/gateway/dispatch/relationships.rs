@@ -3,12 +3,12 @@ use crate::gateway::schema::relationships::{RelationshipAdd, RelationshipRemove}
 use crate::state::ThreadData;
 use epl_common::database::entities::user;
 
-use crate::gateway::schema::SharedUser;
 use crate::AppState;
 use epl_common::database::entities::prelude::User;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
+use epl_common::schema::v9;
 
 pub async fn dispatch_relationship_add(
     thread_data: &mut ThreadData,
@@ -30,7 +30,7 @@ pub async fn dispatch_relationship_add(
             should_notify: true,
             since: chrono::Utc::now().to_string(),
             _type: req_type as i32,
-            user: SharedUser {
+            user: v9::user::User {
                 avatar: originating_user.avatar,
                 avatar_decoration: originating_user.avatar_decoration,
                 discriminator: Some(originating_user.discriminator),

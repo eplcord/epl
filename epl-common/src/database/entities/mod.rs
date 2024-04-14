@@ -12,6 +12,7 @@ pub mod message;
 pub mod message_attachment;
 pub mod note;
 pub mod pin;
+pub mod reaction;
 pub mod relationship;
 pub mod session;
 pub mod user;

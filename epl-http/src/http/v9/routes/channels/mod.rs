@@ -1,5 +1,6 @@
 pub mod pins;
 pub mod attachments;
+pub mod reactions;
 
 use std::io;
 use aws_sdk_s3::primitives::ByteStream;
@@ -17,7 +18,6 @@ use ril::ImageFormat::WebP;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, File, Mention, Message, MessageAttachment, User};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::http::v9::{generate_message_struct, generate_refed_message, SharedAttachment, SharedMessage, SharedMessageReference};
 use epl_common::nats::send_nats_message;
 use epl_common::database::entities::{channel_member, embed, file, mention, message, message_attachment, pin, user};
 use epl_common::messages::MessageTypes;
@@ -34,17 +34,20 @@ use epl_common::{RelationshipType, URL_REGEX, USER_MENTION_REGEX};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::nats::Messages;
 use epl_common::options::{EplOptions, Options};
-use migration::IntoCondition;
+use epl_common::schema::v9;
+use epl_common::schema::v9::message::{generate_message_struct, generate_reactions, generate_refed_message};
 use crate::http::v9::routes::users::channels::{ResChannel, ResChannelMember};
 
 
 #[derive(Serialize)]
-pub struct GetMessageRes(Vec<SharedMessage>);
+pub struct GetMessageRes(Vec<v9::message::Message>);
 
 #[derive(Deserialize)]
 pub struct GetMessageQuery {
     limit: Option<i32>,
     before: Option<i64>,
+    after: Option<i64>,
+    around: Option<i64>
 }
 
 pub async fn get_messages(
@@ -139,7 +142,9 @@ pub async fn get_messages(
 
                 let attachments = i.find_related(File).all(&state.conn).await.expect("Failed to access database!");
 
-                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users, pinned, embeds, attachments));
+                let reactions = generate_reactions(&state.conn, &i, &session_context.user.id).await;
+
+                output.push(generate_message_struct(i.clone(), author, refed_message, mentioned_users, pinned, embeds, attachments, reactions));
             }
 
             (StatusCode::OK, Json(GetMessageRes(output))).into_response()
@@ -153,7 +158,7 @@ pub struct SendMessageReq {
     flags: Option<i32>,
     nonce: String,
     tts: Option<bool>,
-    message_reference: Option<SharedMessageReference>,
+    message_reference: Option<v9::message::MessageReference>,
     allowed_mentions: Option<AllowedMentions>,
     mobile_network_type: Option<String>,
     attachments: Option<Vec<NewAttachment>>
@@ -329,6 +334,8 @@ pub async fn send_message(
 
             let attachments = new_message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
 
+            let reactions = generate_reactions(&state.conn, &new_message, &session_context.user.id).await;
+
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
@@ -338,7 +345,8 @@ pub async fn send_message(
                     mention_results,
                     false,
                     vec![],
-                    attachments
+                    attachments,
+                    reactions
                 )),
             )
                 .into_response()
@@ -349,7 +357,7 @@ pub async fn send_message(
 #[derive(Deserialize)]
 pub struct EditMessageReq {
     content: Option<String>,
-    attachments: Option<Vec<SharedAttachment>>,
+    attachments: Option<Vec<v9::message::Attachment>>,
     flags: Option<i32>
 }
 
@@ -488,6 +496,8 @@ pub async fn edit_message(
 
             let attachments = requested_message.find_related(File).all(&state.conn).await.expect("Failed to access database!");
 
+            let reactions = generate_reactions(&state.conn, &requested_message, &session_context.user.id).await;
+
             (
                 StatusCode::OK,
                 Json(generate_message_struct(
@@ -497,7 +507,8 @@ pub async fn edit_message(
                     mentioned_users,
                     pinned,
                     embeds,
-                    attachments
+                    attachments,
+                    reactions
                 )),
             )
                 .into_response()

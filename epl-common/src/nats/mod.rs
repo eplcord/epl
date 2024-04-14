@@ -105,6 +105,16 @@ pub enum Messages {
     },
     ProcessEmbed {
         message_id: i64,
+    },
+    MessageReactionAdd {
+        message_id: i64,
+        user_id: i64,
+        emoji: String,
+    },
+    MessageReactionRemove {
+        message_id: i64,
+        user_id: i64,
+        emoji: String,
     }
 }
 

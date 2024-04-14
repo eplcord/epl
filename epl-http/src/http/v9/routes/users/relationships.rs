@@ -1,5 +1,5 @@
 use crate::authorization_extractor::SessionContext;
-use crate::nats::{send_relationship_update, RelationshipUpdate};
+use crate::nats::{RelationshipUpdate, send_relationship_update};
 use crate::AppState;
 use axum::extract::Path;
 use axum::http::StatusCode;
@@ -11,11 +11,12 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::IntoActiveModel;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::http::v9::errors::{throw_http_error, APIErrorCode};
-use crate::http::v9::{generated_user_struct, SharedUser};
+use crate::http::v9::errors::{APIErrorCode, throw_http_error};
 use epl_common::RelationshipType;
 use sea_orm::prelude::*;
 use epl_common::relationship::get_relationship;
+use epl_common::schema::v9;
+use epl_common::schema::v9::user::generate_user_struct;
 
 #[derive(Serialize)]
 pub struct RelationshipRes {
@@ -24,7 +25,7 @@ pub struct RelationshipRes {
     since: String,
     #[serde(rename = "type")]
     _type: i32,
-    user: SharedUser,
+    user: v9::user::User,
 }
 
 pub async fn get_all_relationships(
@@ -59,7 +60,7 @@ pub async fn get_all_relationships(
             nickname: None,
             since: i.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             _type: i.relationship_type,
-            user: generated_user_struct(user),
+            user: generate_user_struct(user),
         })
     }
 
@@ -83,7 +84,7 @@ pub async fn get_all_relationships(
             nickname: None,
             since: i.timestamp.and_utc().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
             _type: normalized_type,
-            user: generated_user_struct(user),
+            user: generate_user_struct(user),
         })
     }
 

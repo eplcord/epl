@@ -4,12 +4,13 @@ use epl_common::database::entities::{channel, channel_member, message, pin, user
 
 use crate::gateway::dispatch::{assemble_dispatch, send_message, DispatchTypes};
 use crate::gateway::schema::channels::{ChannelCreate, ChannelDelete, ChannelPinsAck, ChannelPinsUpdate, ChannelRecipientAdd, ChannelRecipientRemove};
-use crate::gateway::schema::{generated_user_struct, SharedUser};
 use epl_common::channels::ChannelTypes;
 use epl_common::database::entities::prelude::{Channel, ChannelMember, Message, Pin, User};
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use sea_orm::prelude::*;
 use sea_orm::QueryOrder;
+use epl_common::schema::v9;
+use epl_common::schema::v9::user::generate_user_struct;
 
 #[derive(Eq, PartialEq)]
 pub enum ChannelTypeUpdate {
@@ -36,10 +37,10 @@ pub async fn dispatch_channel_update(thread_data: &mut ThreadData, state: &AppSt
     }
 
     // If this is a DM or group DM, we need to provide the users in recipients
-    let recipients: Option<Vec<SharedUser>> = if channel.r#type == (ChannelTypes::DM as i32)
+    let recipients: Option<Vec<v9::user::User>> = if channel.r#type == (ChannelTypes::DM as i32)
         || channel.r#type == (ChannelTypes::GroupDM as i32)
     {
-        let mut output: Vec<SharedUser> = vec![];
+        let mut output: Vec<v9::user::User> = vec![];
 
         let members: Vec<channel_member::Model> = ChannelMember::find()
             .filter(channel_member::Column::Channel.eq(id))
@@ -55,7 +56,7 @@ pub async fn dispatch_channel_update(thread_data: &mut ThreadData, state: &AppSt
                 .expect("Failed to access database!")
                 .expect("Invalid user referenced in channel_member!");
 
-            output.push(SharedUser {
+            output.push(v9::user::User {
                 avatar: user.avatar,
                 avatar_decoration: user.avatar_decoration,
                 discriminator: Some(user.discriminator),
@@ -171,7 +172,7 @@ pub async fn dispatch_channel_recipient_update(
                 assemble_dispatch(DispatchTypes::ChannelRecipientAdd(
                     ChannelRecipientAdd {
                         channel_id: channel.id.to_string(),
-                        user: generated_user_struct(user),
+                        user: generate_user_struct(user),
                     },
                 ))
             },
@@ -179,7 +180,7 @@ pub async fn dispatch_channel_recipient_update(
                 assemble_dispatch(DispatchTypes::ChannelRecipientRemove(
                     ChannelRecipientRemove {
                         channel_id: channel.id.to_string(),
-                        user: generated_user_struct(user),
+                        user: generate_user_struct(user),
                     },
                 ))
             }

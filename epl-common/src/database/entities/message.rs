@@ -58,6 +58,8 @@ pub enum Relation {
     MessageAttachment,
     #[sea_orm(has_many = "super::pin::Entity")]
     Pin,
+    #[sea_orm(has_many = "super::reaction::Entity")]
+    Reaction,
     #[sea_orm(
         belongs_to = "super::user::Entity",
         from = "Column::Author",
@@ -89,6 +91,12 @@ impl Related<super::message_attachment::Entity> for Entity {
 impl Related<super::pin::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Pin.def()
+    }
+}
+
+impl Related<super::reaction::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Reaction.def()
     }
 }
 

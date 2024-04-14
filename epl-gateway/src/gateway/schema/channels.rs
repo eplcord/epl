@@ -1,7 +1,7 @@
-use crate::gateway::schema::SharedUser;
 use epl_common::Stub;
 use serde_derive::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use epl_common::schema::v9;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -22,7 +22,7 @@ pub struct ChannelCreate {
     pub topic: Option<String>,
     pub owner_id: Option<String>,
     /// Recipients of DM/Group DM
-    pub recipients: Option<Vec<SharedUser>>,
+    pub recipients: Option<Vec<v9::user::User>>,
     #[serde(rename = "type")]
     pub _type: i32,
     pub version: Option<i32>,
@@ -49,14 +49,14 @@ pub struct ChannelDelete {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ChannelRecipientAdd {
     pub channel_id: String,
-    pub user: SharedUser,
+    pub user: v9::user::User,
 }
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ChannelRecipientRemove {
     pub channel_id: String,
-    pub user: SharedUser,
+    pub user: v9::user::User,
 }
 
 #[skip_serializing_none]

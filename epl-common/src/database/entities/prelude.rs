@@ -10,6 +10,7 @@ pub use super::message::Entity as Message;
 pub use super::message_attachment::Entity as MessageAttachment;
 pub use super::note::Entity as Note;
 pub use super::pin::Entity as Pin;
+pub use super::reaction::Entity as Reaction;
 pub use super::relationship::Entity as Relationship;
 pub use super::session::Entity as Session;
 pub use super::user::Entity as User;

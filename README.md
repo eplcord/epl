@@ -52,9 +52,9 @@ Epl is at a point where basic account and messaging features work, this includes
   * User avatars
   * Group icons
   * Badges
+  * Attachments
 * Media proxy
   * Need to improve URL matching (don't match urls in codeblocks or surrounded by less/greater than signs)
-  * Some sites break Mediaproxy (like Discord!)
 * April Fools
   * 2024 implemented minus the avatar deco (Enable the Packages experiment to access)
 * Tenor
@@ -69,12 +69,12 @@ Epl is at a point where basic account and messaging features work, this includes
 * Mobile support
   * Turns out its incredibly easy to get the React Native Discord client to change its endpoints
     * It also uses `window.GLOBAL_ENV` when starting and only requests an uncompressed JSON gateway
+* Reactions
 
 Some stuff in progress:
 * Mutual friends list
 * Admin api
   * Ignoring the guild paths for now
-* Reactions
 * Settings sync
   * We have the protobufs compiling but no work has been done on user settings yet
 
