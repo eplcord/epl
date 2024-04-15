@@ -15,11 +15,11 @@ use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
 use ril::{Image, Rgba};
 use ril::ImageFormat::WebP;
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, File, Mention, Message, MessageAttachment, User};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Embed, File, Mention, Message, MessageAttachment, Reaction, User};
 use serde_derive::{Deserialize, Serialize};
 
 use epl_common::nats::send_nats_message;
-use epl_common::database::entities::{channel_member, embed, file, mention, message, message_attachment, pin, user};
+use epl_common::database::entities::{channel_member, embed, file, mention, message, message_attachment, pin, reaction, user};
 use epl_common::messages::MessageTypes;
 use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientAdd, ChannelRecipientRemove, MessageCreate, MessageDelete, MessageUpdate, ProcessEmbed, TypingStarted};
 use epl_common::rustflake::Snowflake;
@@ -82,23 +82,71 @@ pub async fn get_messages(
 
             let limit = get_message_query.limit.unwrap_or(50);
 
-            let messages: Vec<message::Model> = match get_message_query.before {
-                None => Message::find()
-                    .filter(message::Column::ChannelId.eq(requested_channel.id))
-                    .limit(limit as u64)
-                    .order_by_desc(message::Column::Id)
-                    .all(&state.conn)
-                    .await
-                    .expect("Failed to access database!"),
-                Some(before) => Message::find()
-                    .filter(message::Column::ChannelId.eq(requested_channel.id))
-                    .limit(limit as u64)
-                    .order_by_desc(message::Column::Id)
-                    .cursor_by(message::Column::Id)
-                    .before(before)
-                    .all(&state.conn)
-                    .await
-                    .expect("Failed to access database!"),
+            // TODO: this doesn't work properly, figure this out
+            let messages: Vec<message::Model> = {
+                if get_message_query.before.is_some() {
+                    Message::find()
+                        .filter(message::Column::ChannelId.eq(requested_channel.id))
+                        .limit(limit as u64)
+                        .cursor_by(message::Column::Id)
+                        .before(get_message_query.before.unwrap())
+                        .all(&state.conn)
+                        .await
+                        .expect("Failed to access database!")
+                } else if get_message_query.after.is_some() {
+                    Message::find()
+                        .filter(message::Column::ChannelId.eq(requested_channel.id))
+                        .limit(limit as u64)
+                        .cursor_by(message::Column::Id)
+                        .after(get_message_query.after.unwrap())
+                        .all(&state.conn)
+                        .await
+                        .expect("Failed to access database!")
+                // } else if get_message_query.around.is_some() {
+                //     // HACK: this is a dumb way of doing this, i need to read docs more
+                //
+                //     let mut messages_part_one = Message::find()
+                //         .filter(message::Column::ChannelId.eq(requested_channel.id))
+                //         .limit(limit as u64 / 2)
+                //         .cursor_by(message::Column::Id)
+                //         .before(get_message_query.around.unwrap())
+                //         .all(&state.conn)
+                //         .await
+                //         .expect("Failed to access database!");
+                //
+                //     messages_part_one.reverse();
+                //
+                //     let mut requested_message = Message::find_by_id(get_message_query.around.unwrap())
+                //         .filter(message::Column::ChannelId.eq(requested_channel.id))
+                //         .all(&state.conn)
+                //         .await
+                //         .expect("Failed to access database!");
+                //
+                //     requested_message.append(&mut messages_part_one);
+                //
+                //     let mut messages_part_three = Message::find()
+                //         .filter(message::Column::ChannelId.eq(requested_channel.id))
+                //         .limit(limit as u64 / 2)
+                //         .cursor_by(message::Column::Id)
+                //         .after(get_message_query.around.unwrap())
+                //         .all(&state.conn)
+                //         .await
+                //         .expect("Failed to access database!");
+                //
+                //     messages_part_three.reverse();
+                //
+                //     messages_part_three.append(&mut requested_message);
+                //
+                //     messages_part_three
+                } else {
+                    Message::find()
+                        .filter(message::Column::ChannelId.eq(requested_channel.id))
+                        .limit(limit as u64)
+                        .order_by_desc(message::Column::Id)
+                        .all(&state.conn)
+                        .await
+                        .expect("Failed to access database!")
+                }
             };
 
             for i in messages {
@@ -558,7 +606,6 @@ pub async fn delete_message(
                 .await
                 .expect("Failed to access database!") {
                 pin
-                    .into_active_model()
                     .delete(&state.conn)
                     .await
                     .expect("Failed to access database!");
@@ -568,7 +615,7 @@ pub async fn delete_message(
             let embeds: Vec<embed::Model> = requested_message.find_related(Embed).all(&state.conn).await.expect("Failed to access database!");
 
             for i in embeds {
-                i.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
+                i.delete(&state.conn).await.expect("Failed to access database!");
             }
 
             // Mark attachments as requesting deletion
@@ -588,11 +635,16 @@ pub async fn delete_message(
                     x.update(&state.conn).await.expect("Failed to access database!");
                 }
 
-                i.0.into_active_model().delete(&state.conn).await.expect("Failed to access database!");
+                i.0.delete(&state.conn).await.expect("Failed to access database!");
+            }
+
+            let reactions: Vec<reaction::Model> = requested_message.find_related(Reaction).all(&state.conn).await.expect("Failed to access database!");
+            
+            for i in reactions {
+                i.delete(&state.conn).await.expect("Failed to access database!");
             }
 
             requested_message
-                .into_active_model()
                 .delete(&state.conn)
                 .await
                 .expect("Failed to access database!");
@@ -605,8 +657,7 @@ pub async fn delete_message(
                     channel_id: cache.1,
                     guild_id: cache.2,
                 },
-            )
-                .await;
+            ).await;
 
             StatusCode::NO_CONTENT.into_response()
         }

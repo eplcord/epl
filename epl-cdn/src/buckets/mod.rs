@@ -35,8 +35,7 @@ pub fn buckets() -> Router {
         .route("/attachments/:channel_id/:file_id/:filename", get(get_attachment))
         // Uploading
         .route("/upload/:key/:filename", put(upload_attachment))
-        // TODO: Replace this with 500mb(?) when Nitro stuff is implemented, set it to 25mb for now
-        .layer(DefaultBodyLimit::max(26214400))
+        .layer(DefaultBodyLimit::max(524288000))
 }
 
 async fn get_image_or(

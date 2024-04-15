@@ -6,7 +6,6 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, Model
 use sea_orm::ActiveValue::Set;
 use serde_derive::Deserialize;
 use unic::emoji::char::is_emoji;
-use epl_common::database::entities::message::Model;
 use epl_common::database::entities::prelude::{Channel, Message, Reaction, User};
 use epl_common::database::entities::reaction;
 use epl_common::nats::Messages::{MessageReactionAdd, MessageReactionRemove};
