@@ -16,3 +16,4 @@ pub mod reaction;
 pub mod relationship;
 pub mod session;
 pub mod user;
+pub mod user_setting;

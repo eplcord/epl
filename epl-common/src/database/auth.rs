@@ -198,6 +198,16 @@ pub async fn create_user(
             message: err.to_string(),
         })?;
 
+    UserSetting::insert(user_setting::ActiveModel {
+        user: data.id.clone(),
+        ..Default::default()
+    }).exec(conn)
+        .await
+        .map_err(|err| NewUserError {
+            kind: NewUserEnum::SeaORM,
+            message: err.to_string(),
+        })?;
+
     Ok(data.id.unwrap())
 }
 

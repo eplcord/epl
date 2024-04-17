@@ -52,6 +52,8 @@ chrono = "0.4.37"
 
 base64 = "0.22.0"
 
+prost = "0.12.4"
+
 ## AWS
 aws-config = { version = "1.1.9", features = ["behavior-version-latest"]}
 aws-sdk-s3 = "1.21.0"

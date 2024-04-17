@@ -5,6 +5,7 @@ mod tracking;
 mod users;
 mod aprilfools2024;
 mod gifs;
+mod proto_settings;
 
 use crate::authorization_extractor::get_session_context;
 use crate::http::v9::routes::auth::{
@@ -28,6 +29,7 @@ use crate::http::v9::routes::channels::attachments::{delete_attachment_upload, p
 use crate::http::v9::routes::channels::pins::{delete_pin, get_pins, new_pin};
 use crate::http::v9::routes::channels::reactions::{add_reaction, delete_specific_user_reaction, get_reactions, remove_reaction};
 use crate::http::v9::routes::gifs::{actually_get_trending_gifs, get_trending_gifs, gif_search_suggestions, search_gifs};
+use crate::http::v9::routes::proto_settings::{edit_settings_proto, get_settings_proto};
 use crate::http::v9::routes::tracking::science;
 use crate::http::v9::routes::users::notes::{get_notes, put_notes};
 
@@ -64,6 +66,8 @@ pub fn assemble_routes() -> Router {
         .route("/lootboxes/open", post(open_lootbox))
         .route("/lootboxes/redeem-prize", post(redeem_prize))
         .route("/lootboxes", get(get_lootboxes))
+        .route("/settings-proto/:proto", get(get_settings_proto))
+        .route("/settings-proto/:proto", patch(edit_settings_proto))
         .route("/", patch(update_user));
 
     let users = Router::new()

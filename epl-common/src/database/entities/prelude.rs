@@ -14,3 +14,4 @@ pub use super::reaction::Entity as Reaction;
 pub use super::relationship::Entity as Relationship;
 pub use super::session::Entity as Session;
 pub use super::user::Entity as User;
+pub use super::user_setting::Entity as UserSetting;

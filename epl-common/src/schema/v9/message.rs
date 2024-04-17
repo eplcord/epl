@@ -1,11 +1,9 @@
-use std::collections::{HashMap, HashSet};
-use async_nats::jetstream::new;
+use std::collections::HashSet;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter};
 use serde_derive::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use serde_json::Value;
 use crate::database::entities::{embed, file, message, reaction, user};
-use crate::database::entities::file::Model;
 use crate::database::entities::prelude::Reaction as ReactionEntity;
 use crate::options::{EplOptions, Options};
 use crate::schema::v9::user::{generate_user_struct, User};

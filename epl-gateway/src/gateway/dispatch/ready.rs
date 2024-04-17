@@ -8,8 +8,8 @@ use crate::gateway::schema::ready::{
 use crate::state::ThreadData;
 use crate::AppState;
 use epl_common::database::auth::{get_all_sessions, get_session_by_token};
-use epl_common::database::entities::prelude::{Channel, ChannelMember, Relationship, User, Message};
-use epl_common::database::entities::{channel, channel_member, message, relationship, user};
+use epl_common::database::entities::prelude::{Channel, ChannelMember, Relationship, User, Message, UserSetting};
+use epl_common::database::entities::{channel, channel_member, message, relationship, user, user_setting};
 use epl_common::options::{EplOptions, Options};
 use sea_orm::{Condition, EntityTrait, QueryOrder};
 use std::collections::HashSet;
@@ -18,6 +18,7 @@ use epl_common::channels::ChannelTypes;
 use epl_common::flags::{generate_public_flags, get_user_flags};
 use epl_common::{RelationshipType, Stub};
 use sea_orm::prelude::*;
+use epl_common::protobufs::{generate_user_proto, ProtoType};
 
 pub async fn dispatch_ready(
     thread_data: &mut ThreadData,
@@ -247,12 +248,19 @@ pub async fn dispatch_ready(
     // Enable sessions
     experiments.push([1095779154, 0, 1, -1, 2, 183, 0, 0]);
 
+    let user_settings = UserSetting::find()
+        .filter(user_setting::Column::User.eq(user.id))
+        .one(&state.conn)
+        .await
+        .expect("Failed to access database!")
+        .expect("User doesn't have any settings!");
+
     send_message(
         thread_data,
         assemble_dispatch(DispatchTypes::Ready(Box::from(Ready {
             version: 9,
             users: other_users,
-            user_settings_proto: String::new(),
+            user_settings_proto: generate_user_proto(ProtoType::PreloadedUserSettings, user_settings),
             user_guild_settings,
             user: user_struct,
             tutorial,

@@ -13,12 +13,12 @@ pub mod messages;
 pub mod nats;
 pub mod nodeinfo;
 pub mod options;
-pub mod rustflake;
 pub mod permissions;
+pub mod protobufs;
 pub mod relationship;
-mod protobufs;
-pub mod tenor;
+pub mod rustflake;
 pub mod schema;
+pub mod tenor;
 
 static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
     Reader::open_readfile(EplOptions::get().maxminddb).expect("Failed to open maxmind database!")
@@ -27,8 +27,9 @@ static GEOIP: Lazy<Reader<Vec<u8>>> = Lazy::new(|| {
 pub static USER_MENTION_REGEX: Lazy<regex::Regex> =
     Lazy::new(|| regex::Regex::new(r"<@!?(\d+)>").unwrap());
 
-pub static URL_REGEX: Lazy<regex::Regex> =
-    Lazy::new(|| regex::Regex::new(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)").unwrap());
+pub static URL_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)").unwrap()
+});
 
 pub fn gen_token() -> String {
     blake3::hash(
@@ -56,7 +57,7 @@ pub fn get_location_from_ip(ip: IpAddr) -> String {
     }
 
     let result: Result<City, MaxMindDBError> = GEOIP.lookup(ip);
-    
+
     match result {
         Ok(result) => {
             format!(
@@ -66,9 +67,7 @@ pub fn get_location_from_ip(ip: IpAddr) -> String {
                 ip
             )
         }
-        Err(_) => {
-            String::from("Locator service not functioning!")
-        }
+        Err(_) => String::from("Locator service not functioning!"),
     }
 }
 

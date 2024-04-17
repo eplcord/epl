@@ -25,7 +25,6 @@ use epl_common::nats::Messages::{ChannelCreate, ChannelDelete, ChannelRecipientA
 use epl_common::rustflake::Snowflake;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
-use tracing::debug;
 use url::Url;
 use epl_common::channels::ChannelTypes;
 use epl_common::permissions::{internal_permission_calculator, InternalChannelPermissions};
