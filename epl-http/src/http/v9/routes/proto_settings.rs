@@ -1,17 +1,21 @@
+use std::collections::HashMap;
 use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use axum::response::IntoResponse;
+use base64::DecodeError;
 use base64::prelude::*;
 use prost::Message;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter};
 use sea_orm::ActiveValue::Set;
 use serde_derive::{Deserialize, Serialize};
 use tracing::debug;
-use epl_common::database::entities::prelude::UserSetting;
-use epl_common::database::entities::user_setting;
-use epl_common::protobufs::{generate_user_proto, ProtoType};
+use epl_common::database::entities::prelude::{Frecency, UserSetting};
+use epl_common::database::entities::{frecency, user_setting};
+use epl_common::protobufs::{FavoriteGIF, FrecencyItem, generate_user_proto, GIFType, ProtoType};
+use epl_common::protobufs::discord_protos::discord_users::v1;
 use epl_common::protobufs::discord_protos::discord_users::v1::PreloadedUserSettings;
+use epl_common::protobufs::ProtoType::FrecencyUserSettings;
 use crate::AppState;
 use crate::authorization_extractor::SessionContext;
 
@@ -37,12 +41,8 @@ pub async fn edit_settings_proto(
 
             match settings_request {
                 Ok(settings_request) => {
-                    let settings_message = PreloadedUserSettings::decode(settings_request.as_slice());
-
-                    match settings_message {
+                    match PreloadedUserSettings::decode(settings_request.as_slice()) {
                         Ok(settings_message) => {
-                            debug!("{:?}", settings_message);
-
                             let user_settings = UserSetting::find()
                                 .filter(user_setting::Column::User.eq(session_context.user.id))
                                 .one(&state.conn)
@@ -251,7 +251,112 @@ pub async fn edit_settings_proto(
                             user_settings.delete(&state.conn).await.expect("Failed to delete old settings!");
 
                             Json(SettingsProtoRes {
-                                settings: generate_user_proto(ProtoType::PreloadedUserSettings, user_settings_active),
+                                settings: generate_user_proto(ProtoType::PreloadedUserSettings(user_settings_active)),
+                            }).into_response()
+                        }
+                        Err(_) => {
+                            StatusCode::BAD_REQUEST.into_response()
+                        }
+                    }
+                }
+                Err(_) => {
+                    StatusCode::BAD_REQUEST.into_response()
+                }
+            }
+        }
+        2 => {
+            let settings_request = BASE64_STANDARD.decode(data.settings.as_bytes());
+
+            match settings_request {
+                Ok(settings_request) => {
+                    match v1::FrecencyUserSettings::decode(settings_request.as_slice()) {
+                        Ok(settings_request) => {
+                            let user_frecency = Frecency::find()
+                                .filter(frecency::Column::User.eq(session_context.user.id))
+                                .one(&state.conn)
+                                .await
+                                .expect("Failed to access database!")
+                                .expect("User doesn't have any frecency!");
+
+                            let mut user_frecency_active = user_frecency.clone().into_active_model();
+
+                            user_frecency_active.data_version = Set(user_frecency.data_version + 1);
+
+                            if let Some(favorite_gifs) = settings_request.favorite_gifs {
+                                let mut favorite_gifs_map: HashMap<String, FavoriteGIF> = HashMap::new();
+
+                                for (k, v) in favorite_gifs.gifs {
+                                    favorite_gifs_map.insert(k, FavoriteGIF {
+                                        format: v.format.into(),
+                                        src: v.src,
+                                        width: v.width,
+                                        height: v.height,
+                                        order: v.order,
+                                    });
+                                }
+
+                                user_frecency_active.favorite_gifs = Set(Some(serde_json::to_value(favorite_gifs_map).unwrap()));
+                                user_frecency_active.favorite_gifs_hide_tooltip = Set(favorite_gifs.hide_tooltip);
+                            }
+
+                            if let Some(favorite_stickers) = settings_request.favorite_stickers {
+                                user_frecency_active.favorite_stickers = Set(Some(favorite_stickers.sticker_ids.iter().map(|x| *x as i64).collect()));
+                            }
+
+                            if let Some(sticker_frecency) = settings_request.sticker_frecency {
+                                let mut sticker_frecency_map: HashMap<u64, FrecencyItem> = HashMap::new();
+
+                                for (k, v) in sticker_frecency.stickers {
+                                    sticker_frecency_map.insert(k, FrecencyItem {
+                                        total_uses: v.total_uses,
+                                        recent_uses: v.recent_uses,
+                                        frecency: v.frecency,
+                                        score: v.score,
+                                    });
+                                }
+
+                                user_frecency_active.sticker_frecency = Set(Some(serde_json::to_value(sticker_frecency_map).unwrap()))
+                            }
+                            
+                            if let Some(favorite_emojis) = settings_request.favorite_emojis {
+                                user_frecency_active.favorite_emojis = Set(Some(favorite_emojis.emojis));
+                            }
+                            
+                            if let Some(emoji_frecency) = settings_request.emoji_frecency {
+                                let mut emoji_frecency_map: HashMap<String, FrecencyItem> = HashMap::new();
+
+                                for (k, v) in emoji_frecency.emojis {
+                                    emoji_frecency_map.insert(k, FrecencyItem {
+                                        total_uses: v.total_uses,
+                                        recent_uses: v.recent_uses,
+                                        frecency: v.frecency,
+                                        score: v.score,
+                                    });
+                                }
+
+                                user_frecency_active.emoji_frecency = Set(Some(serde_json::to_value(emoji_frecency_map).unwrap()));
+                            }
+                            
+                            if let Some(application_command_frecency) = settings_request.application_command_frecency {
+                                let mut application_command_frecency_map: HashMap<String, FrecencyItem> = HashMap::new();
+
+                                for (k, v) in application_command_frecency.application_commands {
+                                    application_command_frecency_map.insert(k, FrecencyItem {
+                                        total_uses: v.total_uses,
+                                        recent_uses: v.recent_uses,
+                                        frecency: v.frecency,
+                                        score: v.score,
+                                    });
+                                }
+
+                                user_frecency_active.emoji_frecency = Set(Some(serde_json::to_value(application_command_frecency_map).unwrap()));
+                            }
+
+                            let user_frecency_active = user_frecency_active.insert(&state.conn).await.expect("Failed to update frecency!");
+                            user_frecency.delete(&state.conn).await.expect("Failed to delete old frecency!");
+
+                            Json(SettingsProtoRes {
+                                settings: generate_user_proto(ProtoType::FrecencyUserSettings(user_frecency_active)),
                             }).into_response()
                         }
                         Err(_) => {
@@ -285,7 +390,19 @@ pub async fn get_settings_proto(
                 .expect("User doesn't have any settings!");
 
             Json(SettingsProtoRes {
-                settings: generate_user_proto(ProtoType::PreloadedUserSettings, user_settings),
+                settings: generate_user_proto(ProtoType::PreloadedUserSettings(user_settings)),
+            }).into_response()
+        }
+        2 => {
+            let user_frecency = Frecency::find()
+                .filter(frecency::Column::User.eq(session_context.user.id))
+                .one(&state.conn)
+                .await
+                .expect("Failed to access database!")
+                .expect("User doesn't have any frecency!");
+
+            Json(SettingsProtoRes {
+                settings: generate_user_proto(ProtoType::FrecencyUserSettings(user_frecency)),
             }).into_response()
         }
         _ => {

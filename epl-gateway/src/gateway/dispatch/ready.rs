@@ -260,15 +260,14 @@ pub async fn dispatch_ready(
         assemble_dispatch(DispatchTypes::Ready(Box::from(Ready {
             version: 9,
             users: other_users,
-            user_settings_proto: generate_user_proto(ProtoType::PreloadedUserSettings, user_settings),
+            user_settings_proto: generate_user_proto(ProtoType::PreloadedUserSettings(user_settings)),
             user_guild_settings,
             user: user_struct,
             tutorial,
             sessions,
             // TODO: Need more research about this
             session_type: String::from("normal"),
-            // FIXME: Get this from the gateway state
-            session_id: String::from(""),
+            session_id: thread_data.gateway_state.session_id.clone().unwrap(),
             resume_gateway_url: EplOptions::get().gateway_url,
             relationships,
             read_state,
@@ -288,7 +287,7 @@ pub async fn dispatch_ready(
             api_code_version: 1,
             // We don't do analytics
             analytics_token: String::from(""),
-            notification_settings: Stub {},
+            notification_settings: Some(Stub {}),
         }))),
     )
     .await;

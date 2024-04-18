@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use prost::Message;
-use crate::database::entities::user_setting;
+use serde_derive::{Deserialize, Serialize};
+use crate::database::entities::{frecency, user_setting};
 use crate::protobufs::discord_protos::discord_users::v1;
+use crate::protobufs::discord_protos::discord_users::v1::FavoriteGif;
 
 pub mod discord_protos {
     pub mod discord_users {
@@ -12,15 +15,52 @@ pub mod discord_protos {
     }
 }
 
-pub enum ProtoType {
-    PreloadedUserSettings
+#[derive(Serialize, Deserialize, Clone)]
+pub struct FrecencyItem {
+    pub total_uses: u32,
+    pub recent_uses: Vec<u64>,
+    pub frecency: i32,
+    pub score: i32
 }
 
-pub fn generate_user_proto(proto: ProtoType, settings: user_setting::Model) -> String {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct FavoriteGIF {
+    pub format: GIFType,
+    pub src: String,
+    pub width: u32,
+    pub height: u32,
+    pub order: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[repr(u8)]
+pub enum GIFType {
+    NONE = 0,
+    IMAGE = 1,
+    VIDEO = 2,
+}
+
+impl From<i32> for GIFType {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => GIFType::NONE,
+            1 => GIFType::IMAGE,
+            2 => GIFType::VIDEO,
+            _ => GIFType::NONE
+        }
+    }
+}
+
+pub enum ProtoType {
+    PreloadedUserSettings(user_setting::Model),
+    FrecencyUserSettings(frecency::Model)
+}
+
+pub fn generate_user_proto(proto: ProtoType) -> String {
     let mut buffer = vec![];
 
     match proto {
-        ProtoType::PreloadedUserSettings => {
+        ProtoType::PreloadedUserSettings(settings) => {
             v1::PreloadedUserSettings {
                 versions: Some(v1::Version {
                     client_version: 0,
@@ -68,8 +108,8 @@ pub fn generate_user_proto(proto: ProtoType, settings: user_setting::Model) -> S
                     render_spoilers: Some(v1::RenderSpoilers {
                         value: settings.text_render_spoilers,
                     }),
-                    emoji_picker_collapsed_sections: vec![],
-                    sticker_picker_collapsed_sections: vec![],
+                    emoji_picker_collapsed_sections: settings.text_emoji_picker_collapsed_sections,
+                    sticker_picker_collapsed_sections: settings.text_sticker_picker_collapsed_sections,
                     view_image_descriptions: Some(v1::ViewImageDescriptions {
                         value: settings.text_view_image_descriptions,
                     }),
@@ -135,7 +175,7 @@ pub fn generate_user_proto(proto: ProtoType, settings: user_setting::Model) -> S
                     allow_activity_party_privacy_voice_channel: Some(v1::AllowActivityPartyPrivacyVoiceChannel {
                         value: settings.privacy_allow_activity_party_privacy_voice_channel,
                     }),
-                    restricted_guild_ids: vec![],
+                    restricted_guild_ids: settings.privacy_restricted_guild_ids.unwrap_or_default().iter().map(|x| *x as u64).collect(),
                     default_guilds_restricted: settings.privacy_default_guilds_restricted,
                     allow_accessibility_detection: settings.privacy_allow_accessibility_detection,
                     detect_platform_accounts: Some(v1::DetectPlatformAccounts {
@@ -151,9 +191,9 @@ pub fn generate_user_proto(proto: ProtoType, settings: user_setting::Model) -> S
                     friend_discovery_flags: Some(v1::FriendDiscoveryFlags {
                         value: settings.privacy_friend_discovery_flags as u32,
                     }),
-                    activity_restricted_guild_ids: vec![],
+                    activity_restricted_guild_ids: settings.privacy_activity_restricted_guild_ids.unwrap_or_default().iter().map(|x| *x as u64).collect(),
                     default_guilds_activity_restricted: settings.privacy_guild_activity_status_restriction_default,
-                    activity_joining_restricted_guild_ids: vec![],
+                    activity_joining_restricted_guild_ids: settings.privacy_activity_joining_restricted_guild_ids.unwrap_or_default().iter().map(|x| *x as u64).collect(),
                 }),
                 debug: Some(v1::DebugSettings {
                     rtc_panel_show_voice_states: Some(v1::RtcPanelShowVoiceStates {
@@ -186,6 +226,67 @@ pub fn generate_user_proto(proto: ProtoType, settings: user_setting::Model) -> S
                     developer_mode: settings.appearance_developer_mode,
                 }),
             }.encode(&mut buffer).expect("Failed to encode user settings protobuf!");
+        }
+        ProtoType::FrecencyUserSettings(frecency) => {
+            let favourite_gifs: HashMap<String, FavoriteGIF> = serde_json::from_value(frecency.favorite_gifs.unwrap_or_default())
+                .unwrap_or_default();
+
+            let sticker_frecency: HashMap<u64, FrecencyItem> = serde_json::from_value(frecency.sticker_frecency.unwrap_or_default())
+                .unwrap_or_default();
+
+            let emoii_frecency: HashMap<String, FrecencyItem> = serde_json::from_value(frecency.emoji_frecency.unwrap_or_default())
+                .unwrap_or_default();
+
+            let application_command_frecency: HashMap<String, FrecencyItem> = serde_json::from_value(frecency.application_command_frecency.unwrap_or_default())
+                .unwrap_or_default();
+
+            v1::FrecencyUserSettings {
+                versions: Some(v1::Version {
+                    client_version: 0,
+                    server_version: 0,
+                    data_version: frecency.data_version as u32,
+                }),
+                favorite_gifs: Some(v1::FavoriteGiFs {
+                    gifs: favourite_gifs.iter().map(|(k, v)| (k.clone(), FavoriteGif {
+                        format: v.format as i32,
+                        src: v.clone().src,
+                        width: v.width,
+                        height: v.height,
+                        order: v.order,
+                    })).collect(),
+                    hide_tooltip: frecency.favorite_gifs_hide_tooltip,
+                }),
+                favorite_stickers: Some(v1::FavoriteStickers {
+                    sticker_ids: frecency.favorite_stickers.unwrap_or_default().iter().map(|x| *x as u64).collect(),
+                }),
+                sticker_frecency: Some(v1::StickerFrecency {
+                    stickers: sticker_frecency.iter().map(|(k, v)| (*k, v1::FrecencyItem {
+                        total_uses: v.total_uses,
+                        recent_uses: v.recent_uses.clone(),
+                        frecency: v.frecency,
+                        score: v.score,
+                    })).collect(),
+                }),
+                favorite_emojis: Some(v1::FavoriteEmojis {
+                    emojis: frecency.favorite_emojis.unwrap_or_default(),
+                }),
+                emoji_frecency: Some(v1::EmojiFrecency {
+                    emojis: emoii_frecency.iter().map(|(k , v)| (k.clone(), v1::FrecencyItem {
+                        total_uses: v.total_uses,
+                        recent_uses: v.recent_uses.clone(),
+                        frecency: v.frecency,
+                        score: v.score,
+                    })).collect(),
+                }),
+                application_command_frecency: Some(v1::ApplicationCommandFrecency {
+                    application_commands: application_command_frecency.iter().map(|(k , v)| (k.clone(), v1::FrecencyItem {
+                        total_uses: v.total_uses,
+                        recent_uses: v.recent_uses.clone(),
+                        frecency: v.frecency,
+                        score: v.score,
+                    })).collect(),
+                }),
+            }.encode(&mut buffer).expect("Failed to encode FrecencyUserSettings!");
         }
     }
 

@@ -1,7 +1,9 @@
 use epl_common::{Stub, User};
 use serde_derive::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 #[derive(Serialize, Deserialize, Clone)]
+#[skip_serializing_none]
 pub struct Ready {
     pub version: i32,
     pub users: Vec<OtherUser>,
@@ -29,7 +31,7 @@ pub struct Ready {
     pub auth_session_id_hash: String,
     pub api_code_version: i32,
     pub analytics_token: String,
-    pub notification_settings: Stub
+    pub notification_settings: Option<Stub>
 }
 
 #[derive(Serialize, Deserialize, Clone)]

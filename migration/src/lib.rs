@@ -23,6 +23,7 @@ mod m20240412_062553_create_message_attachments;
 mod m20240413_215635_add_requested_deletion_to_files;
 mod m20240414_025415_create_reactions;
 mod m20240417_080833_create_settings;
+mod m20240418_040054_create_frecency;
 
 pub struct Migrator;
 
@@ -53,6 +54,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240413_215635_add_requested_deletion_to_files::Migration),
             Box::new(m20240414_025415_create_reactions::Migration),
             Box::new(m20240417_080833_create_settings::Migration),
+            Box::new(m20240418_040054_create_frecency::Migration),
         ]
     }
 }

@@ -7,6 +7,7 @@ pub mod channel;
 pub mod channel_member;
 pub mod embed;
 pub mod file;
+pub mod frecency;
 pub mod mention;
 pub mod message;
 pub mod message_attachment;

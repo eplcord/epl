@@ -73,13 +73,13 @@ Epl is at a point where basic account and messaging features work, this includes
   * No custom emojis until guilds are implemented
 * Protobuf settings sync
   * Note: the protobuf is a somewhat outdated decompiled schema from an older version of the RN Discord app
+* Favourite gifs/emojis/stickers and related frecency
 
 Some stuff in progress:
 * Mutual friends list
 * Admin api
   * Ignoring the guild paths for now
-* Favourite gifs
-
+ 
 Some things I'm definitely adding Eventually™ are:
 * Presence
 * Guilds

@@ -5,6 +5,7 @@ pub use super::channel::Entity as Channel;
 pub use super::channel_member::Entity as ChannelMember;
 pub use super::embed::Entity as Embed;
 pub use super::file::Entity as File;
+pub use super::frecency::Entity as Frecency;
 pub use super::mention::Entity as Mention;
 pub use super::message::Entity as Message;
 pub use super::message_attachment::Entity as MessageAttachment;
